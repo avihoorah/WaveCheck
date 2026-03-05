@@ -215,7 +215,7 @@ export default function App() {
     } finally {
       setLoading(false);
     }
-  }, [now, WEATHERSTACK_KEY]);
+  }, [now]);
 
   useEffect(() => { fetchConditions(selectedBeach); }, [selectedBeach, fetchConditions]);
 
