@@ -313,6 +313,18 @@ export default function App(){
   useEffect(()=>{fetchData(beach);},[beach,fetchData]);
   useEffect(()=>{const t=setInterval(()=>fetchData(beach,true),60000);return()=>clearInterval(t);},[beach,fetchData]);
 
+  // ── CRITICAL: ensure viewport meta exists for mobile browsers ──
+  useEffect(()=>{
+    let m=document.querySelector('meta[name="viewport"]');
+    if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}
+    m.content='width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover';
+    document.documentElement.style.overflowX='hidden';
+    document.documentElement.style.maxWidth='100vw';
+    document.body.style.overflowX='hidden';
+    document.body.style.maxWidth='100vw';
+    document.body.style.width='100%';
+  },[]);
+
   const wc=data?deg2c(data.wd):"—";
   const wvc=data?deg2c(data.waveDir):"—";
   const ws=data?windState(beach,wc):null;
@@ -327,7 +339,7 @@ export default function App(){
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:ital,wght@0,400;0,700&display=swap');
         *{box-sizing:border-box;margin:0;padding:0}
         html{overflow-x:hidden;-webkit-text-size-adjust:100%;text-size-adjust:100%}
-        body{background:#050c16;overflow-x:hidden;width:100%;max-width:100vw;min-width:0}
+        body{background:#050c16;overflow-x:hidden;width:100%;max-width:100vw;min-width:0;overscroll-behavior-x:none}
         ::-webkit-scrollbar{width:3px;height:3px}
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.12);border-radius:4px}
         @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.25}}
@@ -341,45 +353,44 @@ export default function App(){
         button:focus-visible{outline:2px solid #00bfff;outline-offset:2px}
 
         /* ── layout ── */
-        .shell{min-height:100vh;background:linear-gradient(160deg,#050c16 0%,#081828 55%,#040f1c 100%);color:#fff;font-family:'Space Mono',monospace;padding-bottom:48px;position:relative;overflow-x:hidden;width:100%}
-        .hdr{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:rgba(5,12,22,0.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,0.05);width:100%}
-        .page{width:100%;max-width:800px;margin:0 auto;padding:12px 12px}
-        @media(min-width:480px){.page{padding:16px 16px}}
-        @media(min-width:600px){.page{padding:20px 24px}}
+        .shell{min-height:100vh;background:linear-gradient(160deg,#050c16 0%,#081828 55%,#040f1c 100%);color:#fff;font-family:'Space Mono',monospace;padding-bottom:48px;position:relative;overflow-x:hidden;width:100%;max-width:100vw}
+        .hdr{position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 14px;background:rgba(5,12,22,0.95);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-bottom:1px solid rgba(255,255,255,0.05);width:100%;max-width:100vw}
+        .page{width:100%;max-width:min(800px,100vw);margin:0 auto;padding:12px;overflow-x:hidden}
 
         /* ── beach selector ── */
-        .side-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+        .side-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;max-width:100%}
         .side-row::-webkit-scrollbar{display:none}
-        .beach-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;align-items:flex-start;scrollbar-width:none}
+        .beach-row{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch;align-items:flex-start;scrollbar-width:none;max-width:100%}
         .beach-row::-webkit-scrollbar{display:none}
 
         /* ── tabs ── */
         .tabs{display:flex;gap:2px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:3px;margin-bottom:14px;width:100%}
-        .tab{flex:1;padding:8px 1px;border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:1px;transition:all .2s;color:rgba(255,255,255,0.3);min-width:0;overflow:hidden;white-space:nowrap}
-        @media(min-width:380px){.tab{font-size:12px;letter-spacing:1.5px}}
+        .tab{flex:1;padding:8px 0;border-radius:9px;font-family:'Bebas Neue',sans-serif;font-size:11px;letter-spacing:0.5px;transition:all .2s;color:rgba(255,255,255,0.3);min-width:0;overflow:hidden;white-space:nowrap;text-align:center}
+        @media(min-width:360px){.tab{font-size:12px;letter-spacing:1px}}
+        @media(min-width:420px){.tab{letter-spacing:1.5px}}
         .tab.on{background:rgba(0,191,255,0.15);color:#00bfff}
 
-        /* ── stat grid ── */
-        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%}
+        /* ── stat grid — KEY FIX: use calc to guarantee fit ── */
+        .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:100%}
         @media(min-width:520px){.grid2{grid-template-columns:repeat(3,1fr)}}
         @media(min-width:720px){.grid2{grid-template-columns:repeat(4,1fr)}}
 
         /* ── card ── */
-        .card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:13px 14px;width:100%;min-width:0}
+        .card{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:13px 14px;min-width:0;overflow:hidden}
 
         /* ── decision badge ── */
-        .dec{border-radius:16px;padding:14px;margin-bottom:12px;position:relative;overflow:hidden;width:100%;min-width:0}
-        .dec-text{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,7vw,32px);line-height:1;letter-spacing:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+        .dec{border-radius:16px;padding:14px;margin-bottom:12px;position:relative;overflow:hidden;width:100%}
+        .dec-inner{display:flex;align-items:center;gap:12px;min-width:0}
+        .dec-text{font-family:'Bebas Neue',sans-serif;font-size:clamp(20px,6.5vw,32px);line-height:1;letter-spacing:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
         /* ── wind card ── */
-        .wind-card{display:flex;align-items:center;gap:12px;width:100%;min-width:0}
+        .wind-card{display:flex;align-items:center;gap:12px;width:100%;min-width:0;overflow:hidden}
         .wind-mid{flex:1;min-width:0;overflow:hidden}
-        .wind-right{text-align:right;flex-shrink:0;min-width:50px}
+        .wind-right{text-align:right;flex-shrink:0;min-width:46px;max-width:80px}
 
         /* ── charts ── */
-        .chart-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
-        .chart-wrap::-webkit-scrollbar{display:none}
-        .chart-wrap svg{display:block;width:100%;height:auto;min-width:260px}
+        .chart-wrap{width:100%;overflow-x:hidden}
+        .chart-wrap svg{display:block;width:100%;height:auto}
 
         /* ── wave bg ── */
         @keyframes wa1{to{transform:translateX(-50%)}}
