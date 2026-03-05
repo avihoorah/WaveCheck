@@ -38,11 +38,28 @@ const WATER_TEMP_BY_MONTH = [18, 18, 17, 16, 15, 14, 13, 13, 14, 15, 16, 17];
 
 // ─────────────────────────────────────────────────────────────────────────────
 const BEACHES = [
-  { id: "muizenberg",  name: "Muizenberg",     lat: -34.1075, lon: 18.4711 },
-  { id: "bigbay",      name: "Big Bay",         lat: -33.7942, lon: 18.4595 },
-  { id: "kommetjie",   name: "Kommetjie",       lat: -34.1389, lon: 18.3278 },
-  { id: "blouberg",    name: "Bloubergstrand",  lat: -33.8078, lon: 18.4756 },
-  { id: "llandudno",   name: "Llandudno",       lat: -34.0058, lon: 18.3478 },
+  // False Bay (warmer water, SE facing)
+  { id: "muizenberg",    name: "Muizenberg",         lat: -34.1075, lon: 18.4711, level: "Beginner",             side: "False Bay"   },
+  { id: "st_james",      name: "St James",            lat: -34.1178, lon: 18.4547, level: "Beginner/Inter",       side: "False Bay"   },
+  { id: "kalk_bay",      name: "Kalk Bay Reef",       lat: -34.1280, lon: 18.4430, level: "Advanced",             side: "False Bay"   },
+  { id: "fish_hoek",     name: "Fish Hoek",           lat: -34.1382, lon: 18.4279, level: "Beginner/Inter",       side: "False Bay"   },
+  { id: "clovelly",     name: "Clovelly",            lat: -34.1333, lon: 18.4167, level: "Intermediate",         side: "False Bay"   },
+
+  // Atlantic Seaboard & Peninsula (colder, more powerful)
+  { id: "llandudno",     name: "Llandudno",           lat: -34.0058, lon: 18.3478, level: "Intermediate",         side: "Atlantic"    },
+  { id: "glen_beach",    name: "Glen Beach",           lat: -33.9486, lon: 18.3756, level: "Advanced",             side: "Atlantic"    },
+  { id: "camps_bay",     name: "Camps Bay",            lat: -33.9500, lon: 18.3764, level: "Beginner/Inter",       side: "Atlantic"    },
+  { id: "pebbles",       name: "Pebbles",              lat: -33.9800, lon: 18.3600, level: "Bodyboard",            side: "Atlantic"    },
+  { id: "off_the_wall",  name: "Off The Wall",         lat: -33.9050, lon: 18.4050, level: "Advanced",             side: "Atlantic"    },
+
+  // West Coast (big swell, consistent)
+  { id: "bigbay",        name: "Big Bay",              lat: -33.7942, lon: 18.4595, level: "All levels",           side: "West Coast"  },
+  { id: "blouberg",      name: "Bloubergstrand",       lat: -33.8078, lon: 18.4756, level: "All levels",           side: "West Coast"  },
+
+  // South Peninsula (powerful, scenic)
+  { id: "kommetjie",     name: "Long Beach (Kommetjie)", lat: -34.1389, lon: 18.3278, level: "Intermediate",       side: "Peninsula"   },
+  { id: "noordhoek",     name: "Noordhoek / The Hoek",  lat: -34.1050, lon: 18.3600, level: "Advanced",           side: "Peninsula"   },
+  { id: "scarborough",   name: "Scarborough",            lat: -34.2000, lon: 18.3750, level: "Inter/Advanced",     side: "Peninsula"   },
 ];
 
 const WIND_DIRS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
@@ -273,10 +290,24 @@ export default function App() {
             <div style={{ position:"relative" }}>
               <select className="beach-select" value={selectedBeach.id}
                 onChange={e => setSelectedBeach(BEACHES.find(b => b.id === e.target.value))}
-                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, padding:"14px 44px 14px 16px", color:"#fff", fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:2 }}>
-                {BEACHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                style={{ width:"100%", background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.12)", borderRadius:10, padding:"14px 44px 14px 16px", color:"#fff", fontFamily:"'Bebas Neue',sans-serif", fontSize:20, letterSpacing:2 }}>
+                {["False Bay","Atlantic","West Coast","Peninsula"].map(side => (
+                  <optgroup key={side} label={`── ${side} ──`}>
+                    {BEACHES.filter(b => b.side === side).map(b => (
+                      <option key={b.id} value={b.id}>{b.name} · {b.level}</option>
+                    ))}
+                  </optgroup>
+                ))}
               </select>
               <div style={{ position:"absolute", right:14, top:"50%", transform:"translateY(-50%)", color:"rgba(255,255,255,0.3)", pointerEvents:"none" }}>▼</div>
+            </div>
+            {/* Level badge */}
+            <div style={{ marginTop:8, display:"flex", gap:8, alignItems:"center" }}>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,0.25)", letterSpacing:1 }}>SKILL LEVEL:</div>
+              <div style={{ fontSize:10, color:"#00bfff", letterSpacing:2, background:"rgba(0,191,255,0.1)", border:"1px solid rgba(0,191,255,0.2)", borderRadius:20, padding:"3px 10px" }}>
+                {selectedBeach.level}
+              </div>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,0.2)", letterSpacing:1 }}>{selectedBeach.side}</div>
             </div>
           </div>
 
