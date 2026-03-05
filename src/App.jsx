@@ -594,7 +594,7 @@ export default function App() {
                   }}>
                     {b.name}
                   </button>
-                  <div style={{ fontSize:8, color: LEVEL_COLORS[b.level]???"#888", letterSpacing:1 }}>
+                  <div style={{ fontSize:8, color: LEVEL_COLORS[b.level]??"#888", letterSpacing:1 }}>
                     {b.level.toUpperCase()}
                   </div>
                 </div>
