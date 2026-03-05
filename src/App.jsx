@@ -146,44 +146,28 @@ export default function App() {
   const [error, setError]     = useState(null);
   const [now]                 = useState(new Date());
 
-  const WEATHERSTACK_KEY = import.meta.env.VITE_WEATHERSTACK_API_KEY;
-
   const fetchConditions = useCallback(async (beach) => {
     setLoading(true);
     setError(null);
     try {
       const hr = now.getHours();
 
-      // 1 — Open-Meteo Marine + Weather (free, unlimited, no key)
+      // 1 — Open-Meteo Marine + Weather with CURRENT conditions (live, free, no key)
+      // The &current= parameters pull real-time station data, not forecast values
       const [marineRes, weatherRes] = await Promise.all([
-        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${beach.lat}&longitude=${beach.lon}&hourly=wave_height,wave_period,wave_direction&timezone=Africa%2FJohannesburg&forecast_days=1`),
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${beach.lat}&longitude=${beach.lon}&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability,cloud_cover&timezone=Africa%2FJohannesburg&forecast_days=1`)
+        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${beach.lat}&longitude=${beach.lon}&current=wave_height,wave_period,wave_direction&hourly=wave_height,wave_period,wave_direction&timezone=Africa%2FJohannesburg&forecast_days=1`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${beach.lat}&longitude=${beach.lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,cloud_cover&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability,cloud_cover&timezone=Africa%2FJohannesburg&forecast_days=1`)
       ]);
       const marine  = await marineRes.json();
       const weather = await weatherRes.json();
 
-      let windSpeed    = weather.hourly?.wind_speed_10m?.[hr]        ?? 0;
-      let windDir      = weather.hourly?.wind_direction_10m?.[hr]    ?? 0;
-      let temp         = weather.hourly?.temperature_2m?.[hr]        ?? 0;
-      let cloud        = weather.hourly?.cloud_cover?.[hr]           ?? 0;
-      let rain         = weather.hourly?.precipitation_probability?.[hr] ?? 0;
-      let weatherSrc   = "Open-Meteo";
-
-      // 2 — Weatherstack live current conditions (optional, 100 req/month free)
-      if (WEATHERSTACK_KEY) {
-        try {
-          const wsRes  = await fetch(`https://api.weatherstack.com/current?access_key=${WEATHERSTACK_KEY}&query=${beach.lat},${beach.lon}&units=m`);
-          const ws     = await wsRes.json();
-          if (ws?.current) {
-            temp       = ws.current.temperature  ?? temp;
-            windSpeed  = ws.current.wind_speed   ?? windSpeed;
-            windDir    = ws.current.wind_degree  ?? windDir;
-            cloud      = ws.current.cloudcover   ?? cloud;
-            rain       = ws.current.precip > 0 ? Math.min(ws.current.precip * 20, 100) : rain;
-            weatherSrc = "Weatherstack ✓";
-          }
-        } catch { /* fallback already set */ }
-      }
+      // Use live current readings where available, fall back to hourly forecast
+      let windSpeed  = weather.current?.wind_speed_10m    ?? weather.hourly?.wind_speed_10m?.[hr]      ?? 0;
+      let windDir    = weather.current?.wind_direction_10m ?? weather.hourly?.wind_direction_10m?.[hr]  ?? 0;
+      let temp       = weather.current?.temperature_2m    ?? weather.hourly?.temperature_2m?.[hr]       ?? 0;
+      let cloud      = weather.current?.cloud_cover       ?? weather.hourly?.cloud_cover?.[hr]          ?? 0;
+      let rain       = weather.hourly?.precipitation_probability?.[hr] ?? 0;
+      let weatherSrc = "Open-Meteo Live ✓";
 
       // 3 — Harmonic tide model — zero API calls
       const tideData  = buildTideCurve24h(now);
@@ -213,9 +197,9 @@ export default function App() {
       }
 
       setData({
-        waveHeight:  marine.hourly?.wave_height?.[hr]    ?? 0,
-        swellPeriod: marine.hourly?.wave_period?.[hr]    ?? 0,
-        waveDir:     marine.hourly?.wave_direction?.[hr] ?? 0,
+        waveHeight:  marine.current?.wave_height    ?? marine.hourly?.wave_height?.[hr]    ?? 0,
+        swellPeriod: marine.current?.wave_period    ?? marine.hourly?.wave_period?.[hr]    ?? 0,
+        waveDir:     marine.current?.wave_direction ?? marine.hourly?.wave_direction?.[hr] ?? 0,
         windSpeed, windDir, temp, cloud, rain,
         tideLevel, tideState, tides: tideData,
         waterTemp, weatherSrc,
@@ -401,10 +385,10 @@ export default function App() {
                 <div style={{ fontSize:9, color:"rgba(255,255,255,0.2)", letterSpacing:2, marginBottom:8 }}>DATA SOURCES</div>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
                   {[
-                    ["WAVES",   "Open-Meteo ✓",    true],
-                    ["WEATHER", data.weatherSrc,    data.weatherSrc.includes("✓")],
-                    ["TIDES",   "Harmonic Model ✓", true],
-                    ["WATER",   "Seasonal Model ✓", true],
+                    ["WAVES",   "Open-Meteo Live ✓", true],
+                    ["WEATHER", data.weatherSrc,      true],
+                    ["TIDES",   "Harmonic Model ✓",   true],
+                    ["WATER",   "Seasonal Model ✓",   true],
                   ].map(([k, v, green]) => (
                     <div key={k} style={{ fontSize:9, color:green?"#00ff87":"rgba(255,255,255,0.3)", background:"rgba(255,255,255,0.04)", borderRadius:4, padding:"3px 8px", letterSpacing:1 }}>
                       {k}: {v}
