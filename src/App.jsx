@@ -177,8 +177,8 @@ function TideChart48h({ curve, currentHour }) {
   const extremes = findTideExtremes(curve);
 
   return (
-    <div style={{ overflowX:"auto", overflowY:"hidden" }}>
-      <svg width={w} height={h + 24} viewBox={`0 0 ${w} ${h + 24}`} style={{ display:"block", minWidth:w }}>
+    <div style={{ overflowX:"auto", overflowY:"hidden", WebkitOverflowScrolling:"touch", marginLeft:-4, paddingLeft:4 }}>
+      <svg width={w} height={h + 24} viewBox={`0 0 ${w} ${h + 24}`} style={{ display:"block" }}>
         <defs>
           <linearGradient id="tideGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#00bfff" stopOpacity="0.4"/>
@@ -240,8 +240,8 @@ function SwellChart({ hourly, currentHour }) {
   const nowX = scaleX(currentHour);
 
   return (
-    <div style={{ overflowX:"auto" }}>
-      <svg width={w} height={h + 24} viewBox={`0 0 ${w} ${h + 24}`} style={{ display:"block", minWidth:w }}>
+    <div style={{ overflowX:"auto", WebkitOverflowScrolling:"touch", marginLeft:-4, paddingLeft:4 }}>
+      <svg width={w} height={h + 24} viewBox={`0 0 ${w} ${h + 24}`} style={{ display:"block" }}>
         <defs>
           <linearGradient id="swellGrad" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#7c3aed" stopOpacity="0.5"/>
@@ -295,18 +295,18 @@ function Tile({ icon, label, value, unit, sub, accent, wide }) {
     <div style={{
       background: accent ? `rgba(0,191,255,0.06)` : "rgba(255,255,255,0.03)",
       border: `1px solid ${accent ? "rgba(0,191,255,0.2)" : "rgba(255,255,255,0.07)"}`,
-      borderRadius: 14, padding: "16px 18px",
+      borderRadius: 14, padding: "14px 14px",
       gridColumn: wide ? "span 2" : "span 1",
       display:"flex", flexDirection:"column", gap:5
     }}>
-      <div style={{ fontSize:10, color:"rgba(255,255,255,0.3)", letterSpacing:2.5, textTransform:"uppercase", fontFamily:"'Space Mono',monospace" }}>
+      <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:1.5, textTransform:"uppercase", fontFamily:"'Space Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>
         {icon} {label}
       </div>
       <div style={{ display:"flex", alignItems:"baseline", gap:5 }}>
-        <span style={{ fontSize:26, fontFamily:"'Bebas Neue',sans-serif", color: accent ? "#00bfff" : "#fff", lineHeight:1.1 }}>{value}</span>
+        <span style={{ fontSize:24, fontFamily:"'Bebas Neue',sans-serif", color: accent ? "#00bfff" : "#fff", lineHeight:1.1, wordBreak:"break-all" }}>{value}</span>
         {unit && <span style={{ fontSize:12, color:"rgba(255,255,255,0.35)", fontFamily:"'Space Mono',monospace" }}>{unit}</span>}
       </div>
-      {sub && <div style={{ fontSize:10, color:"rgba(255,255,255,0.28)", fontFamily:"'Space Mono',monospace" }}>{sub}</div>}
+      {sub && <div style={{ fontSize:10, color:"rgba(255,255,255,0.28)", fontFamily:"'Space Mono',monospace", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sub}</div>}
     </div>
   );
 }
@@ -354,20 +354,21 @@ function DecisionBadge({ data, beach, now }) {
   return (
     <div style={{
       background: `${color}10`, border:`2px solid ${color}40`,
-      borderRadius:20, padding:"24px 28px", marginBottom:14,
-      display:"flex", alignItems:"center", gap:20, flexWrap:"wrap",
+      borderRadius:20, padding:"20px", marginBottom:14,
       position:"relative", overflow:"hidden"
     }}>
       <div style={{ position:"absolute", top:-40, right:-40, width:160, height:160,
         background:`radial-gradient(circle,${color}20,transparent 70%)`, pointerEvents:"none" }}/>
-      <div style={{ fontSize:52 }}>{emoji}</div>
-      <div>
-        <div style={{ fontSize:11, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginBottom:4 }}>SHOULD YOU SURF?</div>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:46, color, lineHeight:1, letterSpacing:3 }}>{decision}</div>
-        <div style={{ fontSize:12, color:"rgba(255,255,255,0.45)", marginTop:4, maxWidth:320 }}>{reasons}</div>
-      </div>
-      <div style={{ marginLeft:"auto" }}>
-        <ScoreRing score={data.rating} color={r.color} size={96}/>
+      <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginBottom:10 }}>SHOULD YOU SURF?</div>
+      <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+        <div style={{ fontSize:40, flexShrink:0 }}>{emoji}</div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:34, color, lineHeight:1, letterSpacing:2 }}>{decision}</div>
+          <div style={{ fontSize:11, color:"rgba(255,255,255,0.45)", marginTop:4, lineHeight:1.4 }}>{reasons}</div>
+        </div>
+        <div style={{ flexShrink:0 }}>
+          <ScoreRing score={data.rating} color={r.color} size={76}/>
+        </div>
       </div>
     </div>
   );
@@ -518,7 +519,7 @@ export default function App() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap');
         *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-        html,body{background:#050c16;overflow-x:hidden}
+        html,body{background:#050c16;overflow-x:hidden;max-width:100%;width:100%}
         ::-webkit-scrollbar{width:3px;height:3px}
         ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
         select{appearance:none;-webkit-appearance:none;cursor:pointer}
@@ -532,37 +533,35 @@ export default function App() {
         button:focus{outline:none}
         input:focus{outline:none}
         .beach-pill:hover{opacity:0.85}
-        @media(max-width:520px){
-          .hero-score{font-size:38px!important}
-          .hero-emoji{font-size:40px!important}
-        }
+        .app-wrap{padding:16px 12px}
+        @media(min-width:480px){.app-wrap{padding:20px 16px}}
       `}</style>
 
       <WaveBg/>
 
-      <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#050c16 0%,#081828 60%,#040f1c 100%)", fontFamily:"'Space Mono',monospace", color:"#fff", paddingBottom:60, position:"relative", zIndex:1 }}>
+      <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#050c16 0%,#081828 60%,#040f1c 100%)", fontFamily:"'Space Mono',monospace", color:"#fff", paddingBottom:60, position:"relative", zIndex:1, overflowX:"hidden", maxWidth:"100vw" }}>
 
         {/* ── HEADER ── */}
-        <div style={{ borderBottom:"1px solid rgba(255,255,255,0.05)", padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12, background:"rgba(5,12,22,0.85)", backdropFilter:"blur(20px)", position:"sticky", top:0, zIndex:200 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-            <div style={{ width:38, height:38, borderRadius:10, background:"linear-gradient(135deg,#00bfff,#0055ff)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:20, boxShadow:"0 0 20px rgba(0,191,255,0.3)" }}>🌊</div>
-            <div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, letterSpacing:4, lineHeight:1, color:"#fff" }}>WAVECHECK</div>
-              <div style={{ fontSize:9, color:"rgba(255,255,255,0.25)", letterSpacing:2.5 }}>CAPE TOWN · LIVE CONDITIONS</div>
+        <div style={{ borderBottom:"1px solid rgba(255,255,255,0.05)", padding:"12px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:8, background:"rgba(5,12,22,0.85)", backdropFilter:"blur(20px)", position:"sticky", top:0, zIndex:200 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, minWidth:0 }}>
+            <div style={{ width:34, height:34, borderRadius:9, background:"linear-gradient(135deg,#00bfff,#0055ff)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0, boxShadow:"0 0 20px rgba(0,191,255,0.3)" }}>🌊</div>
+            <div style={{ minWidth:0 }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:22, letterSpacing:4, lineHeight:1, color:"#fff" }}>WAVECHECK</div>
+              <div style={{ fontSize:8, color:"rgba(255,255,255,0.25)", letterSpacing:2 }}>CAPE TOWN · LIVE</div>
             </div>
           </div>
-          <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-            <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:5 }}>
               <div className="live-dot" style={{ width:6, height:6, borderRadius:"50%", background:"#00ff87" }}/>
               <span style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:2 }}>LIVE</span>
             </div>
-            <span style={{ fontSize:12, color:"rgba(255,255,255,0.4)", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:2 }}>
-              {now.toLocaleDateString("en-ZA",{weekday:"short",day:"numeric",month:"short"})} · {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
+            <span style={{ fontSize:11, color:"rgba(255,255,255,0.4)", fontFamily:"'Bebas Neue',sans-serif", letterSpacing:1 }}>
+              {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
             </span>
           </div>
         </div>
 
-        <div style={{ maxWidth:740, margin:"0 auto", padding:"20px 14px" }}>
+        <div className="app-wrap" style={{ maxWidth:740, margin:"0 auto" }}>
 
           {/* ── BEACH SELECTOR ── */}
           <div style={{ marginBottom:20 }}>
@@ -656,16 +655,16 @@ export default function App() {
                   <DecisionBadge data={data} beach={selectedBeach} now={now}/>
 
                   {/* Best session */}
-                  <div style={{ background:"rgba(0,191,255,0.05)", border:"1px solid rgba(0,191,255,0.18)", borderRadius:14, padding:"16px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
-                    <div>
+                  <div style={{ background:"rgba(0,191,255,0.05)", border:"1px solid rgba(0,191,255,0.18)", borderRadius:14, padding:"16px 18px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:10 }}>
+                    <div style={{ minWidth:0 }}>
                       <div style={{ fontSize:9, color:"rgba(0,191,255,0.55)", letterSpacing:3, marginBottom:4 }}>⏱ BEST SESSION TODAY</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:30, color:"#00bfff", letterSpacing:3 }}>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, color:"#00bfff", letterSpacing:2 }}>
                         {fmt(data.bestStart)} – {fmt(data.bestEnd)}
                       </div>
                     </div>
-                    <div style={{ textAlign:"right" }}>
-                      <div style={{ fontSize:9, color:"rgba(255,255,255,0.25)", letterSpacing:2, marginBottom:4 }}>WINDOW RATING</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:24, color:getRatingLabel(data.bestScore).color, letterSpacing:2 }}>
+                    <div style={{ textAlign:"right", flexShrink:0 }}>
+                      <div style={{ fontSize:8, color:"rgba(255,255,255,0.25)", letterSpacing:1, marginBottom:4 }}>RATING</div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:20, color:getRatingLabel(data.bestScore).color, letterSpacing:2 }}>
                         {getRatingLabel(data.bestScore).emoji} {getRatingLabel(data.bestScore).label.toUpperCase()}
                       </div>
                     </div>
@@ -676,10 +675,10 @@ export default function App() {
                     <Tile icon="🌊" label="Wave Height" value={data.waveHeight.toFixed(1)} unit="m"
                       sub={data.waveHeight<0.5?"Flat":data.waveHeight<1?"Small":data.waveHeight<1.8?"Fun size":"Solid"} accent/>
                     <Tile icon="⏱" label="Swell Period" value={data.swellPeriod.toFixed(0)} unit="sec"
-                      sub={data.swellPeriod>=12?"Long — quality waves":data.swellPeriod>=8?"Medium period":"Short — bumpy"}/>
+                      sub={data.swellPeriod>=12?"Long period ✓":data.swellPeriod>=8?"Medium period":"Short period"}/>
                     <Tile icon="💨" label="Wind Speed" value={data.windSpeed.toFixed(0)} unit="km/h"
-                      sub={windCompass + (offshore?" — Offshore ✓":" — Onshore ✗")}/>
-                    <Tile icon="🧭" label="Swell Direction" value={waveCompass} sub={`${data.waveDir.toFixed(0)}°`}/>
+                      sub={windCompass + (offshore?" Offshore ✓":" Onshore ✗")}/>
+                    <Tile icon="🧭" label="Swell Dir" value={waveCompass} sub={`${data.waveDir.toFixed(0)}°`}/>
                     <Tile icon="🌤" label="Air Temp" value={data.temp.toFixed(0)} unit="°C" sub={`Cloud ${data.cloud}%`}/>
                     <Tile icon="🌊" label="Water Temp" value={data.waterTemp} unit="°C" sub="Seasonal avg"/>
                     <Tile icon="🔆" label="UV Index" value={data.uv?.toFixed(0)??"-"} sub={data.uv>=8?"Very High 🔥":data.uv>=5?"Moderate":"Low"} accent/>
@@ -689,19 +688,21 @@ export default function App() {
                   </div>
 
                   {/* Wind card */}
-                  <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"18px 20px", display:"flex", alignItems:"center", gap:20, flexWrap:"wrap" }}>
-                    <WindArrow deg={data.windDir} size={72} color={offshore?"#00ff87":"#f87171"}/>
-                    <div>
-                      <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginBottom:6 }}>WIND</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:38, letterSpacing:2, lineHeight:1 }}>{windCompass}</div>
-                      <div style={{ fontSize:10, color: offshore?"#00ff87":"#f87171", marginTop:4 }}>
-                        {offshore ? "Offshore — glassy faces ✓" : "Onshore — choppy surface ✗"}
+                  <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid rgba(255,255,255,0.07)", borderRadius:14, padding:"16px 18px" }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:16 }}>
+                      <WindArrow deg={data.windDir} size={64} color={offshore?"#00ff87":"#f87171"}/>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginBottom:4 }}>WIND</div>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:30, letterSpacing:2, lineHeight:1 }}>{windCompass}</div>
+                        <div style={{ fontSize:10, color: offshore?"#00ff87":"#f87171", marginTop:4 }}>
+                          {offshore ? "Offshore ✓ glassy" : "Onshore ✗ choppy"}
+                        </div>
                       </div>
-                    </div>
-                    <div style={{ marginLeft:"auto", textAlign:"right" }}>
-                      <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginBottom:6 }}>SWELL FROM</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:38, letterSpacing:2, lineHeight:1 }}>{waveCompass}</div>
-                      <div style={{ fontSize:10, color:"rgba(255,255,255,0.3)", marginTop:4 }}>{data.waveDir.toFixed(0)}°</div>
+                      <div style={{ textAlign:"right", flexShrink:0 }}>
+                        <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:2, marginBottom:4 }}>SWELL</div>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:30, letterSpacing:2, lineHeight:1 }}>{waveCompass}</div>
+                        <div style={{ fontSize:10, color:"rgba(255,255,255,0.3)", marginTop:4 }}>{data.waveDir.toFixed(0)}°</div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -760,30 +761,30 @@ export default function App() {
               {activeTab === "gear" && (
                 <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
                   {/* Wetsuit */}
-                  <div style={{ background:`${data.wetsuit.color}12`, border:`1px solid ${data.wetsuit.color}40`, borderRadius:16, padding:"24px 24px" }}>
+                  <div style={{ background:`${data.wetsuit.color}12`, border:`1px solid ${data.wetsuit.color}40`, borderRadius:16, padding:"20px" }}>
                     <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginBottom:10 }}>🤿 WETSUIT RECOMMENDATION</div>
-                    <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-                      <div style={{ fontSize:52 }}>{data.wetsuit.icon}</div>
-                      <div>
-                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:32, color:data.wetsuit.color, letterSpacing:2 }}>{data.wetsuit.suit}</div>
-                        <div style={{ fontSize:11, color:"rgba(255,255,255,0.4)", marginTop:4 }}>
-                          Water {data.waterTemp}°C · Wind chill factor applied
+                    <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                      <div style={{ fontSize:44, flexShrink:0 }}>{data.wetsuit.icon}</div>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:26, color:data.wetsuit.color, letterSpacing:2, lineHeight:1.1 }}>{data.wetsuit.suit}</div>
+                        <div style={{ fontSize:10, color:"rgba(255,255,255,0.4)", marginTop:4 }}>
+                          Water {data.waterTemp}°C · Wind chill applied
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* UV / Sun warning */}
-                  <div style={{ background: data.uv>=6?"rgba(251,191,36,0.07)":"rgba(255,255,255,0.03)", border:`1px solid ${data.uv>=6?"rgba(251,191,36,0.3)":"rgba(255,255,255,0.07)"}`, borderRadius:14, padding:"18px 20px" }}>
+                  <div style={{ background: data.uv>=6?"rgba(251,191,36,0.07)":"rgba(255,255,255,0.03)", border:`1px solid ${data.uv>=6?"rgba(251,191,36,0.3)":"rgba(255,255,255,0.07)"}`, borderRadius:14, padding:"16px 18px" }}>
                     <div style={{ fontSize:9, color:"rgba(255,255,255,0.3)", letterSpacing:3, marginBottom:10 }}>🔆 SUN PROTECTION</div>
-                    <div style={{ display:"flex", alignItems:"center", gap:16 }}>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:48, color: data.uv>=8?"#f87171":data.uv>=5?"#fbbf24":"#4ade80" }}>UV {data.uv?.toFixed(0)??"-"}</div>
-                      <div>
-                        <div style={{ fontSize:14, color:"#fff", marginBottom:4 }}>
-                          {data.uv>=8?"Apply SPF 50+ — reapply every hour":data.uv>=5?"SPF 30+ recommended":data.uv>=3?"Light protection needed":"Low UV today"}
+                    <div style={{ display:"flex", alignItems:"center", gap:14 }}>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:38, color: data.uv>=8?"#f87171":data.uv>=5?"#fbbf24":"#4ade80", flexShrink:0 }}>UV {data.uv?.toFixed(0)??"-"}</div>
+                      <div style={{ minWidth:0 }}>
+                        <div style={{ fontSize:12, color:"#fff", marginBottom:4, lineHeight:1.3 }}>
+                          {data.uv>=8?"SPF 50+ — reapply every hour":data.uv>=5?"SPF 30+ recommended":data.uv>=3?"Light protection needed":"Low UV today"}
                         </div>
                         <div style={{ fontSize:10, color:"rgba(255,255,255,0.3)" }}>
-                          {data.uv>=6?"Wear a rashguard or UV-50 lycra top." : "Still wear sunscreen on the water."}
+                          {data.uv>=6?"Wear a rashguard or UV-50 lycra." : "Still wear sunscreen on the water."}
                         </div>
                       </div>
                     </div>
@@ -803,9 +804,9 @@ export default function App() {
                       { item: "Water bottle", icon: "💧", always: true },
                     ].map((g, i) => g.always && (
                       <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 0", borderBottom: i<7?"1px solid rgba(255,255,255,0.05)":"none" }}>
-                        <span style={{ fontSize:18 }}>{g.icon}</span>
-                        <span style={{ fontSize:12, color:"rgba(255,255,255,0.6)" }}>{g.item}</span>
-                        <span style={{ marginLeft:"auto", color:"#4ade80", fontSize:14 }}>✓</span>
+                        <span style={{ fontSize:18, flexShrink:0 }}>{g.icon}</span>
+                        <span style={{ fontSize:12, color:"rgba(255,255,255,0.6)", flex:1, minWidth:0 }}>{g.item}</span>
+                        <span style={{ color:"#4ade80", fontSize:14, flexShrink:0 }}>✓</span>
                       </div>
                     ))}
                   </div>
