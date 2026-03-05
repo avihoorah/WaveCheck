@@ -57,6 +57,12 @@ function rating(sc){
   return{e:"💤",l:"Poor",c:"#f87171",grad:"from #f87171 to #dc2626"};
 }
 
+function swellQuality(sp){
+  if(sp>=14)return{label:"Groundswell",color:"#00ff87"};
+  if(sp>=10)return{label:"Mid-period",color:"#fbbf24"};
+  return{label:"Wind swell",color:"#f87171"};
+}
+
 // ─── BEACHES ──────────────────────────────────────────────────────────────────
 const BEACHES = [
   {id:"muizenberg",  name:"Muizenberg",         lat:-34.1075,lon:18.4711,level:"Beginner",      side:"False Bay", gw:["NW","N","NNW","WNW","W"],iw:[0.6,1.4],kelp:false,rip:true, char:"Soft crumbly lefts and rights. Long rides, forgiving. Perfect for beginners."},
@@ -486,6 +492,10 @@ export default function App() {
         @keyframes shimmer { 0%,100%{opacity:0.4} 50%{opacity:1} }
         @keyframes waveBg1 { to{transform:translateX(-50%)} }
         @keyframes waveBg2 { from{transform:translateX(-50%)} to{transform:translateX(0)} }
+        @keyframes waveBg3 { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        @keyframes epicGlow { 0%,100%{box-shadow:0 0 0 0 rgba(0,255,135,0),0 4px 24px rgba(0,255,135,0.06)} 50%{box-shadow:0 0 0 3px rgba(0,255,135,0.08),0 4px 40px rgba(0,255,135,0.2)} }
+        @keyframes firingSlide { from{opacity:0;transform:translateY(-6px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes badgePop { from{opacity:0;transform:scale(0.8) translateY(-3px)} to{opacity:1;transform:scale(1) translateY(0)} }
 
         .rise { animation:rise 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
         .pulse { animation:pulse 2.5s ease-in-out infinite; }
@@ -493,14 +503,22 @@ export default function App() {
 
         .shell {
           min-height:100vh;
-          background:radial-gradient(ellipse 120% 60% at 50% -10%, rgba(0,80,160,0.18) 0%, transparent 70%),
-                      linear-gradient(180deg, #060d17 0%, #07111e 100%);
+          background:
+            radial-gradient(ellipse 130% 55% at 50% -5%, rgba(0,95,190,0.22) 0%, transparent 65%),
+            radial-gradient(ellipse 70% 40% at 85% 85%, rgba(0,25,75,0.15) 0%, transparent 55%),
+            linear-gradient(180deg, #060d17 0%, #07111e 55%, #060c18 100%);
           color:#fff;
           font-family:'DM Mono',monospace;
           padding-bottom:60px;
           overflow-x:hidden;
           width:100%;
           max-width:100vw;
+        }
+        .shell::before {
+          content:'';
+          position:fixed; inset:0;
+          background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          opacity:0.022; pointer-events:none; z-index:0;
         }
 
         .hdr {
@@ -544,10 +562,12 @@ export default function App() {
           white-space:nowrap; overflow:hidden;
         }
         .tab-btn.active {
-          background:rgba(0,191,255,0.12);
+          background:linear-gradient(135deg, rgba(0,191,255,0.18) 0%, rgba(0,110,220,0.1) 100%);
           color:#7dd3fc;
-          box-shadow:0 0 12px rgba(0,191,255,0.1);
+          box-shadow:0 0 14px rgba(0,191,255,0.12), inset 0 1px 0 rgba(0,191,255,0.2);
+          border:1px solid rgba(0,191,255,0.2);
         }
+        .tab-btn:not(.active):hover { color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.04); }
 
         /* Cards */
         .card {
@@ -570,6 +590,7 @@ export default function App() {
           position:relative; overflow:hidden;
           margin-bottom:10px;
         }
+        .hero-epic { animation:epicGlow 3s ease-in-out infinite; }
 
         /* Stat mini grid */
         .stat-grid {
@@ -623,20 +644,24 @@ export default function App() {
         /* Ambient wave background */
         .wave-bg {
           position:fixed; bottom:0; left:0;
-          width:100%; height:140px;
-          pointer-events:none; z-index:0; opacity:0.04;
+          width:100%; height:160px;
+          pointer-events:none; z-index:0; opacity:0.045;
         }
         .wave1 { animation:waveBg1 18s linear infinite; }
         .wave2 { animation:waveBg2 13s linear infinite; }
+        .wave3 { animation:waveBg3 26s linear infinite; }
       `}</style>
 
       {/* Ambient waves */}
-      <svg className="wave-bg" viewBox="0 0 1440 140" preserveAspectRatio="none">
+      <svg className="wave-bg" viewBox="0 0 1440 160" preserveAspectRatio="none">
         <g className="wave1">
-          <path d="M0,80 C200,30 400,120 600,80 C800,40 1000,120 1200,80 C1400,40 1600,120 1800,80 C2000,40 2200,120 2400,80 L2400,140 L0,140Z" fill="#00bfff"/>
+          <path d="M0,80 C200,30 400,120 600,80 C800,40 1000,120 1200,80 C1400,40 1600,120 1800,80 C2000,40 2200,120 2400,80 L2400,160 L0,160Z" fill="#00bfff"/>
         </g>
         <g className="wave2">
-          <path d="M0,100 C240,60 480,130 720,100 C960,70 1200,130 1440,100 C1680,70 1920,130 2160,100 L2160,140 L0,140Z" fill="#0055cc" opacity="0.6"/>
+          <path d="M0,100 C240,60 480,130 720,100 C960,70 1200,130 1440,100 C1680,70 1920,130 2160,100 L2160,160 L0,160Z" fill="#0055cc" opacity="0.55"/>
+        </g>
+        <g className="wave3">
+          <path d="M0,122 C180,98 360,142 540,122 C720,102 900,142 1080,122 C1260,102 1440,142 1620,122 C1800,102 1980,142 2160,122 L2160,160 L0,160Z" fill="#003399" opacity="0.35"/>
         </g>
       </svg>
 
@@ -769,6 +794,8 @@ export default function App() {
                 const crowd = crowdLevel(beach,data.sc);
                 const r = rating(data.sc);
                 const wst2 = windState(beach,wc);
+                const sq = swellQuality(data.sp);
+                const isDawnPatrol = data.bst >= 5 && data.bst <= 8;
                 let dec, emoji, color, reason;
                 const goCount = [wst2.s!=="Onshore",data.tl>0.6&&data.tl<1.7,data.wh>=beach.iw[0]*.7&&data.wh<=beach.iw[1]*1.3,data.ws<28].filter(Boolean).length;
                 if(goCount>=3&&data.sc>=55){dec="PADDLE OUT";emoji="🤙";color="#00ff87";reason="Conditions are firing.";}
@@ -782,20 +809,59 @@ export default function App() {
                 return (
                   <div style={{display:"flex",flexDirection:"column",gap:9}}>
 
-                    {/* HERO */}
-                    <div className="hero" style={{background:`linear-gradient(135deg, ${color}08 0%, transparent 60%)`,
-                      border:`1px solid ${color}30`}}>
-                      <div style={{position:"absolute",top:-40,right:-40,width:160,height:160,
-                        background:`radial-gradient(${color}18, transparent 70%)`,pointerEvents:"none"}}/>
-                      <div style={{fontSize:8,color:"rgba(255,255,255,0.25)",letterSpacing:3,marginBottom:10}}>
-                        SHOULD YOU SURF?
+                    {/* FIRING BANNER */}
+                    {data.sc >= 80 && (
+                      <div style={{
+                        animation:"firingSlide 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
+                        background:"linear-gradient(135deg,rgba(0,255,135,0.1) 0%,rgba(0,191,255,0.07) 100%)",
+                        border:"1px solid rgba(0,255,135,0.3)",borderRadius:10,padding:"10px 14px",
+                        display:"flex",alignItems:"center",justifyContent:"space-between"
+                      }}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <span style={{fontSize:18}}>🔥</span>
+                          <div>
+                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:"#00ff87",letterSpacing:2}}>FIRING RIGHT NOW</div>
+                            <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",letterSpacing:1}}>Epic conditions at {beach.name}</div>
+                          </div>
+                        </div>
+                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#00ff87",lineHeight:1}}>{data.sc}</div>
                       </div>
+                    )}
+
+                    {/* HERO */}
+                    <div className={`hero${data.sc>=80?" hero-epic":""}`} style={{
+                      background:`linear-gradient(135deg,${color}12 0%,${color}05 45%,transparent 72%),linear-gradient(220deg,rgba(0,15,40,0.55) 0%,transparent 55%)`,
+                      border:`1px solid ${color}30`,
+                      boxShadow:`0 4px 32px ${color}0a,inset 0 1px 0 ${color}12`
+                    }}>
+                      <div style={{position:"absolute",top:-50,right:-50,width:210,height:210,
+                        background:`radial-gradient(${color}1c,transparent 70%)`,pointerEvents:"none"}}/>
+                      <div style={{position:"absolute",bottom:0,left:0,right:0,height:44,
+                        background:`linear-gradient(0deg,${color}07,transparent)`,
+                        pointerEvents:"none",borderRadius:"0 0 16px 16px"}}/>
+
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                        <div style={{fontSize:8,color:"rgba(255,255,255,0.25)",letterSpacing:3}}>SHOULD YOU SURF?</div>
+                        {isDawnPatrol && (
+                          <div style={{
+                            animation:"badgePop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards",
+                            display:"flex",alignItems:"center",gap:4,
+                            background:"rgba(251,191,36,0.1)",border:"1px solid rgba(251,191,36,0.28)",
+                            borderRadius:20,padding:"3px 10px"
+                          }}>
+                            <span style={{fontSize:9}}>🌅</span>
+                            <span style={{fontSize:7.5,color:"#fbbf24",letterSpacing:1.5}}>DAWN PATROL</span>
+                          </div>
+                        )}
+                      </div>
+
                       <div style={{display:"flex",alignItems:"center",gap:14}}>
                         <span style={{fontSize:40,flexShrink:0,lineHeight:1}}>{emoji}</span>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontFamily:"'Bebas Neue',sans-serif",
                             fontSize:"clamp(24px,7vw,38px)",lineHeight:1,letterSpacing:2,
-                            color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                            color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
+                            textShadow:`0 0 28px ${color}40`}}>
                             {dec}
                           </div>
                           <div style={{fontSize:10,color:"rgba(255,255,255,0.4)",marginTop:4,lineHeight:1.4}}>
@@ -805,17 +871,17 @@ export default function App() {
                         <ScoreArc sc={data.sc} color={r.c} size={80}/>
                       </div>
 
-                      {/* Quick condition pills */}
+                      {/* Quick condition pills — tinted to their own colour */}
                       <div style={{display:"flex",gap:6,marginTop:14,flexWrap:"wrap"}}>
                         {[
                           {l:`${data.wh.toFixed(1)}m`, icon:"🌊", c:data.wh>=beach.iw[0]&&data.wh<=beach.iw[1]?"#00ff87":data.wh>beach.iw[1]*1.3?"#f87171":"#fbbf24"},
-                          {l:`${data.sp.toFixed(0)}s period`, icon:"⏱", c:data.sp>=12?"#00ff87":data.sp>=8?"#fbbf24":"#f87171"},
+                          {l:sq.label, icon:"⏱", c:sq.color},
                           {l:`${wc} ${data.ws.toFixed(0)}km/h`, icon:"💨", c:wst2.c},
                           {l:data.ts, icon:"🌙", c:"#7dd3fc"},
                           {l:crowd.level, icon:"👥", c:crowd.color},
                         ].map((p,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:5,
-                            background:"rgba(0,0,0,0.3)",border:`1px solid ${p.c}25`,
+                            background:`${p.c}0e`,border:`1px solid ${p.c}28`,
                             borderRadius:20,padding:"4px 10px"}}>
                             <span style={{fontSize:10}}>{p.icon}</span>
                             <span style={{fontSize:8.5,color:p.c,letterSpacing:0.5}}>{p.l}</span>
