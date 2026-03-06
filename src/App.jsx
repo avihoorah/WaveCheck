@@ -989,34 +989,34 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         }
         .tabs::-webkit-scrollbar { display:none; }
         .tab-btn {
-          flex:1; min-width:0; padding:8px 4px; border-radius:8px;
-          font-family:'Orbitron',monospace; font-size:8px; letter-spacing:0.8px;
-          color:rgba(0,191,255,0.35);
+          flex:1; min-width:0; padding:9px 4px; border-radius:8px;
+          font-family:'Orbitron',monospace; font-size:9px; letter-spacing:0.5px;
+          color:rgba(0,191,255,0.6);
           transition:all 0.18s; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
         }
         .tab-btn.active {
-          background:rgba(0,191,255,0.12);
+          background:rgba(0,191,255,0.14);
           color:#7dd3fc;
           box-shadow:0 0 12px rgba(0,191,255,0.1), inset 0 1px 0 rgba(0,191,255,0.15);
-          border:1px solid rgba(0,191,255,0.22);
+          border:1px solid rgba(0,191,255,0.25);
         }
-        .tab-btn:not(.active):hover { color:rgba(0,191,255,0.6); background:rgba(0,191,255,0.05); }
+        .tab-btn:not(.active):hover { color:rgba(0,191,255,0.85); background:rgba(0,191,255,0.05); }
 
         /* ── BOTTOM NAV — hidden ── */
         .bottom-nav { display:none !important; }
 
         /* ── CARDS ── */
         .card {
-          background:rgba(255,255,255,0.02);
-          border:1px solid rgba(255,255,255,0.06);
+          background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.07);
           border-radius:12px;
           padding:14px;
           min-width:0; overflow:hidden;
         }
         .card-label {
           font-family:'Orbitron',monospace;
-          font-size:9px; letter-spacing:2px;
-          color:rgba(255,255,255,0.3);
+          font-size:10px; letter-spacing:1.5px;
+          color:rgba(255,255,255,0.5);
           text-transform:uppercase;
           margin-bottom:10px;
         }
@@ -1036,14 +1036,14 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         @media(min-width:700px) { .stat-grid { grid-template-columns:repeat(4,1fr); } }
 
         .stat-cell {
-          background:rgba(255,255,255,0.02);
-          border:1px solid rgba(255,255,255,0.05);
+          background:rgba(255,255,255,0.05);
+          border:1px solid rgba(255,255,255,0.08);
           border-radius:10px; padding:11px 12px; min-width:0;
         }
         .stat-label {
           font-family:'Orbitron',monospace;
           font-size:9px; letter-spacing:1.5px;
-          color:rgba(255,255,255,0.3);
+          color:rgba(255,255,255,0.5);
           text-transform:uppercase; margin-bottom:5px;
         }
         .stat-value {
@@ -1053,7 +1053,7 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         }
         .stat-sub {
           font-family:'JetBrains Mono',monospace;
-          font-size:11px; color:rgba(255,255,255,0.35);
+          font-size:11px; color:rgba(255,255,255,0.55);
           margin-top:3px; line-height:1.3;
         }
 
@@ -1078,6 +1078,7 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           backdrop-filter:blur(8px);
           display:flex; align-items:center; justify-content:center;
           padding:16px;
+          overflow-y:auto;
         }
         .modal-sheet {
           width:100%; max-width:500px;
@@ -1086,8 +1087,9 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           background:#0a1628;
           border:1px solid rgba(0,191,255,0.2);
           border-radius:20px;
-          padding:20px 18px 24px;
+          padding:24px 20px;
           animation:modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards;
+          margin:auto;
         }
         @keyframes modalPop { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
         .modal-handle { display:none; }
@@ -1109,9 +1111,9 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         .check-item { transition:opacity 0.2s; }
         .check-item.done { opacity:0.45; }
         .check-box {
-          width:20px; height:20px; border-radius:6px; border:1.5px solid rgba(255,255,255,0.15);
+          width:44px; height:44px; border-radius:10px; border:1.5px solid rgba(255,255,255,0.2);
           display:flex; align-items:center; justify-content:center; flex-shrink:0;
-          transition:all 0.18s; font-size:11px;
+          transition:all 0.18s; font-size:16px;
         }
         .check-box.checked { background:rgba(0,255,135,0.15); border-color:rgba(0,255,135,0.5); }
       `}</style>
@@ -1262,13 +1264,6 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                 {beach.rip && <span style={{fontSize:7,flexShrink:0}}>⚡</span>}
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                <button onClick={()=>setFavs(p=>p.includes(beach.id)?p.filter(x=>x!==beach.id):[...p,beach.id])}
-                  style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:14,color:favs.includes(beach.id)?"#ffb300":"rgba(255,255,255,0.25)",
-                    background:"transparent",border:"none",
-                    transition:"color 0.2s",flexShrink:0}}>
-                  {favs.includes(beach.id)?"★":"☆"}
-                </button>
                 <button onClick={()=>setShowBeachPicker(p=>!p)}
                   style={{height:28,padding:"0 12px",borderRadius:20,
                     display:"flex",alignItems:"center",gap:4,
@@ -1306,7 +1301,7 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                         background:beach.id===b.id?"rgba(0,191,255,0.12)":"rgba(255,255,255,0.03)",
                         border:`1px solid ${beach.id===b.id?"rgba(0,191,255,0.4)":"rgba(255,255,255,0.06)"}`,
                         color:beach.id===b.id?"#7dd3fc":"rgba(255,255,255,0.55)"}}>
-                      <span>{b.name}{favs.includes(b.id)?" ★":""}</span>
+                      <span>{b.name}</span>
                       <span style={{fontSize:9,color:LVL_COLOR[b.level]??"#888",letterSpacing:0.5,flexShrink:0,opacity:0.7}}>{b.level}</span>
                     </button>
                   ))}
@@ -1418,10 +1413,13 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                             </div>
                           )}
                           <button onClick={()=>setShowScoreInfo(true)}
-                            style={{width:22,height:22,borderRadius:"50%",fontSize:11,
+                            style={{width:44,height:44,borderRadius:"50%",fontSize:11,
+                              background:"transparent",border:"none",
+                              color:"rgba(255,255,255,0.45)",display:"flex",alignItems:"center",justifyContent:"center",
+                              position:"relative"}}>
+                            <span style={{width:22,height:22,borderRadius:"50%",fontSize:11,
                               background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
-                              color:"rgba(255,255,255,0.45)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                            ⓘ
+                              display:"flex",alignItems:"center",justifyContent:"center"}}>ⓘ</span>
                           </button>
                         </div>
                       </div>
@@ -1465,7 +1463,7 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                     <div style={{display:"flex",gap:7}}>
                       <div style={{flex:1,background:"rgba(0,191,255,0.04)",
                         border:"1px solid rgba(0,191,255,0.15)",borderRadius:11,padding:"12px 14px"}}>
-                        <div className="card-label" style={{color:"rgba(0,191,255,0.5)"}}>⏱ BEST WINDOW TODAY</div>
+                        <div className="card-label" style={{color:"rgba(0,191,255,0.5)",whiteSpace:"nowrap"}}>⏱ BEST WINDOW</div>
                         <div style={{fontFamily:"'Orbitron',monospace",fontSize:20,color:"#7dd3fc",letterSpacing:2}}>
                           {fmt(data.bst)} – {fmt(data.ben)}
                         </div>
@@ -2033,7 +2031,7 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           background:rgba(0,191,255,0.13); border-color:rgba(0,191,255,0.35); color:#7dd3fc;
         }
         .mode-btn.dive-active {
-          background:rgba(0,229,204,0.13); border-color:rgba(0,229,204,0.35); color:#00e5cc;
+          background:rgba(0,229,204,0.13); border-color:rgba(0,229,204,0.6); color:#00e5cc;
         }
         .mode-btn.inactive { color:rgba(255,255,255,0.2); }
         .mode-btn.inactive:hover { color:rgba(255,255,255,0.45); }
@@ -2059,14 +2057,14 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         .tabs::-webkit-scrollbar { display:none; }
 
         .card {
-          background:rgba(0,229,204,0.03);
-          border:1px solid rgba(0,229,204,0.08);
+          background:rgba(0,229,204,0.06);
+          border:1px solid rgba(0,229,204,0.1);
           border-radius:12px; padding:14px;
           min-width:0; overflow:hidden;
         }
         .card-label {
-          font-size:7.5px; letter-spacing:3px;
-          color:rgba(0,229,204,0.35);
+          font-size:10px; letter-spacing:2px;
+          color:rgba(0,229,204,0.6);
           text-transform:uppercase; margin-bottom:10px;
           font-family:'Orbitron',monospace;
         }
@@ -2083,38 +2081,38 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         @media(min-width:700px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
 
         .stat-cell {
-          background:rgba(0,229,204,0.03);
-          border:1px solid rgba(0,229,204,0.07);
+          background:rgba(0,229,204,0.06);
+          border:1px solid rgba(0,229,204,0.1);
           border-radius:10px; padding:11px 12px; min-width:0;
         }
         /* ── TABS — shown, replaced bottom nav ── */
         .tabs { display:flex !important; }
         .tab-btn {
-          flex:1; padding:7px 0; border-radius:7px;
-          font-family:'Orbitron',monospace; font-size:8.5px; letter-spacing:0.8px;
-          color:rgba(0,229,204,0.3);
+          flex:1; padding:9px 4px; border-radius:7px;
+          font-family:'Orbitron',monospace; font-size:9px; letter-spacing:0.5px;
+          color:rgba(0,229,204,0.6);
           transition:all 0.18s; text-align:center; white-space:nowrap; overflow:hidden;
         }
         .tab-btn.active {
           background:linear-gradient(135deg,rgba(0,229,204,0.18) 0%,rgba(0,100,90,0.12) 100%);
           color:#00e5cc;
           box-shadow:0 0 14px rgba(0,229,204,0.12), inset 0 1px 0 rgba(0,229,204,0.2);
-          border:1px solid rgba(0,229,204,0.2);
+          border:1px solid rgba(0,229,204,0.22);
         }
-        .tab-btn:not(.active):hover { color:rgba(0,229,204,0.55); background:rgba(0,229,204,0.04); }
+        .tab-btn:not(.active):hover { color:rgba(0,229,204,0.85); background:rgba(0,229,204,0.04); }
 
         /* ── BOTTOM NAV (dive teal theme) — hidden ── */
         .bottom-nav-dive { display:none !important; }
 
         .card {
-          background:rgba(0,229,204,0.03);
-          border:1px solid rgba(0,229,204,0.08);
+          background:rgba(0,229,204,0.06);
+          border:1px solid rgba(0,229,204,0.1);
           border-radius:12px; padding:14px;
           min-width:0; overflow:hidden;
         }
         .card-label {
-          font-size:9px; letter-spacing:2px;
-          color:rgba(0,229,204,0.4);
+          font-size:10px; letter-spacing:1.5px;
+          color:rgba(0,229,204,0.65);
           text-transform:uppercase; margin-bottom:10px;
           font-family:'Orbitron',monospace;
         }
@@ -2131,13 +2129,13 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         @media(min-width:700px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
 
         .stat-cell {
-          background:rgba(0,229,204,0.03);
-          border:1px solid rgba(0,229,204,0.07);
+          background:rgba(0,229,204,0.06);
+          border:1px solid rgba(0,229,204,0.1);
           border-radius:10px; padding:11px 12px; min-width:0;
         }
-        .stat-label { font-size:9px; letter-spacing:1.5px; color:rgba(0,229,204,0.35); text-transform:uppercase; margin-bottom:5px; font-family:'Orbitron',monospace; }
+        .stat-label { font-size:9px; letter-spacing:1.5px; color:rgba(0,229,204,0.6); text-transform:uppercase; margin-bottom:5px; font-family:'Orbitron',monospace; }
         .stat-value { font-family:'Orbitron',monospace; font-size:18px; color:#e0f7f5; line-height:1.05; }
-        .stat-sub   { font-size:11px; color:rgba(0,229,204,0.4); margin-top:3px; line-height:1.3; }
+        .stat-sub   { font-size:11px; color:rgba(0,229,204,0.65); margin-top:3px; line-height:1.3; }
 
         /* ── MODAL (dive themed) ── */
         .modal-overlay-d {
@@ -2146,6 +2144,7 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           backdrop-filter:blur(8px);
           display:flex; align-items:center; justify-content:center;
           padding:16px;
+          overflow-y:auto;
         }
         .modal-sheet-d {
           width:100%; max-width:500px;
@@ -2154,8 +2153,9 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           background:#030f12;
           border:1px solid rgba(0,229,204,0.2);
           border-radius:20px;
-          padding:20px 18px 24px;
+          padding:24px 20px;
           animation:modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards;
+          margin:auto;
         }
         .modal-handle-d { display:none; }
 
@@ -2163,9 +2163,9 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         .check-item-d { transition:opacity 0.2s; }
         .check-item-d.done { opacity:0.4; }
         .check-box-d {
-          width:20px; height:20px; border-radius:6px; border:1.5px solid rgba(0,229,204,0.2);
+          width:44px; height:44px; border-radius:10px; border:1.5px solid rgba(0,229,204,0.25);
           display:flex; align-items:center; justify-content:center; flex-shrink:0;
-          transition:all 0.18s; font-size:11px;
+          transition:all 0.18s; font-size:16px;
         }
         .check-box-d.checked { background:rgba(0,229,204,0.12); border-color:rgba(0,229,204,0.5); }
 
@@ -2345,13 +2345,6 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                 )}
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                <button onClick={()=>setFavs(p=>p.includes(site.id)?p.filter(x=>x!==site.id):[...p,site.id])}
-                  style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:14,color:favs.includes(site.id)?"#ffb300":"rgba(0,229,204,0.3)",
-                    background:"transparent",border:"none",
-                    transition:"color 0.2s",flexShrink:0}}>
-                  {favs.includes(site.id)?"★":"☆"}
-                </button>
                 <button onClick={()=>setShowPicker(p=>!p)}
                   style={{height:28,padding:"0 12px",borderRadius:20,
                     display:"flex",alignItems:"center",gap:4,
@@ -2388,7 +2381,7 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                         background:site.id===s.id?"rgba(0,229,204,0.1)":"rgba(0,229,204,0.03)",
                         border:`1px solid ${site.id===s.id?"rgba(0,229,204,0.4)":"rgba(0,229,204,0.08)"}`,
                         color:site.id===s.id?"#00e5cc":"rgba(0,229,204,0.55)"}}>
-                      <span>{s.name}{favs.includes(s.id)?" ★":""}</span>
+                      <span>{s.name}</span>
                       <span style={{fontSize:8,color:"rgba(0,229,204,0.4)",letterSpacing:0.5,flexShrink:0}}>{s.side}</span>
                     </button>
                   ))}
@@ -2456,10 +2449,12 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                         DIVE CONDITIONS — {site.name.toUpperCase()}
                       </div>
                       <button onClick={()=>setShowDiveScoreInfo(true)}
-                        style={{width:22,height:22,borderRadius:"50%",fontSize:11,
-                          background:"rgba(0,229,204,0.06)",border:"1px solid rgba(0,229,204,0.15)",
+                        style={{width:44,height:44,borderRadius:"50%",fontSize:11,
+                          background:"transparent",border:"none",
                           color:"rgba(0,229,204,0.5)",display:"flex",alignItems:"center",justifyContent:"center"}}>
-                        ⓘ
+                        <span style={{width:22,height:22,borderRadius:"50%",
+                          background:"rgba(0,229,204,0.06)",border:"1px solid rgba(0,229,204,0.15)",
+                          display:"flex",alignItems:"center",justifyContent:"center"}}>ⓘ</span>
                       </button>
                     </div>
 
@@ -2519,6 +2514,19 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                         </div>
                       ))}
                     </div>
+
+                    {/* SHARE CONDITIONS */}
+                    <button onClick={()=>{
+                      const txt = `🤿 ${site.name} — ${verdict.verdict}\n${verdict.sub}\n${data.wh.toFixed(1)}m swell · ${data.wc} ${data.ws.toFixed(0)}km/h · Viz ${vis.est}\nwave-check-eosin.vercel.app`;
+                      if(navigator.share){navigator.share({title:`${site.name} dive conditions`,text:txt});}
+                      else{navigator.clipboard?.writeText(txt).then(()=>alert("Copied to clipboard!"));}
+                    }} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+                      padding:"11px",borderRadius:10,
+                      background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.12)",
+                      color:"rgba(0,229,204,0.55)",width:"100%",
+                      fontFamily:"'Orbitron',monospace",fontSize:9,letterSpacing:2,transition:"all 0.15s"}}>
+                      📤 SHARE CONDITIONS
+                    </button>
                   </div>
 
                   {/* QUICK STATS ROW */}
@@ -2749,7 +2757,7 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                             </div>
                             <div style={{flexShrink:0,textAlign:"right"}}>
                               <div style={{fontSize:9,color:"rgba(0,229,204,0.5)",fontFamily:"'Orbitron',monospace"}}>⬇{s.maxDepth}m</div>
-                              {favs.includes(s.id) && <div style={{fontSize:10,color:"#ffb300",marginTop:2}}>★</div>}
+
                             </div>
                           </button>
                         );
@@ -3024,8 +3032,8 @@ export default function App() {
         }
         .shared-brand { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; letter-spacing:2.5px; line-height:1; color:#fff; flex-shrink:0; }
         .shared-location { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:1px; color:rgba(255,255,255,0.75); line-height:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
-        .shared-sub { font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:1.5px; }
-        .shared-badge { font-family:'JetBrains Mono',monospace; font-size:6.5px; letter-spacing:1px; border:1px solid; border-radius:999px; padding:2px 6px; }
+        .shared-sub { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1.5px; }
+        .shared-badge { font-family:'JetBrains Mono',monospace; font-size:8px; letter-spacing:0.8px; border:1px solid; border-radius:999px; padding:3px 8px; }
         .shared-mode-pill { flex-shrink:0; }
         .mode-scene { will-change:opacity,transform; animation:modeSwap 160ms ease; }
         @keyframes modeSwap { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
