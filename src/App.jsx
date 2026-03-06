@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
-// ─── TIDE MODEL ───────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════════
+// SHARED — tide model + helpers
+// ═══════════════════════════════════════════════════════════════════════════════
 const TIDE_C = [
   { a:0.76, s:28.9841, p:160 }, { a:0.25, s:30.0000, p:195 },
   { a:0.15, s:28.4397, p:140 }, { a:0.10, s:15.0411, p:220 },
@@ -16,6 +18,10 @@ const D16 = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W",
 const deg2c = d => D16[Math.round(((d%360)+360)%360/22.5)%16];
 const MONTH_TEMP = [18,18,17,16,15,14,13,13,14,15,16,17];
 
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// SURF MODE HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
 function wetsuit(wt,ws){ const c=wt-ws*0.3;
   if(c<10)return{suit:"5/4mm + Hood & Boots",icon:"🥶",color:"#60a5fa",short:"5/4mm"};
   if(c<13)return{suit:"4/3mm Full Suit",icon:"🧊",color:"#93c5fd",short:"4/3mm"};
@@ -358,11 +364,236 @@ function AllBeachesOverview({allScores, onSelect, currentId}) {
   );
 }
 
-// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+// ─── SURF CONSTANTS ─────────────────────────────────────────────────────────────────
 const TABS = [{id:"now",l:"Now"},{id:"forecast",l:"Forecast"},{id:"tides",l:"Tides"},{id:"spots",l:"Spots"},{id:"safety",l:"Safety"},{id:"gear",l:"Gear"}];
 const SIDES = ["All","False Bay","Atlantic","West Coast","Peninsula"];
 
-export default function App() {
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DIVE MODE HELPERS
+// ═══════════════════════════════════════════════════════════════════════════════
+// Diving condition logic — INVERTED from surfing. Calm = good.
+function diveVerdict(wh, ws, sp, tl) {
+  const swellOk = wh <= 1.0;
+  const windOk  = ws <= 15;
+  const periodOk = sp <= 10 || wh < 0.5; // short period ok if swell tiny
+  const tideOk  = tl > 0.6 && tl < 1.8;
+  const goCount = [swellOk, windOk, periodOk, tideOk].filter(Boolean).length;
+  if (goCount === 4) return { verdict:"GO", color:"#00ff9d", icon:"🤿", sub:"Clean conditions. Visibility likely good." };
+  if (goCount >= 2) return { verdict:"CAUTION", color:"#ffb300", icon:"⚠️", sub:"Some factors against you. Assess on the day." };
+  return { verdict:"NO-GO", color:"#ff4444", icon:"🚫", sub:"Conditions likely to reduce visibility and safety." };
+}
+
+function visibilityEstimate(wh, sp) {
+  if (wh < 0.4) return { est:"10–15m", color:"#00ff9d" };
+  if (wh < 0.8 && sp < 10) return { est:"6–10m", color:"#00e5cc" };
+  if (wh < 1.2) return { est:"3–6m", color:"#ffb300" };
+  return { est:"<3m", color:"#ff4444" };
+}
+
+function currentStrength(wh, tl, ts) {
+  const falling = ts.includes("Falling") || ts.includes("High");
+  const rising  = ts.includes("Rising")  || ts.includes("Low");
+  const bigSwell = wh > 1.0;
+  if (bigSwell && (falling || rising)) return { level:"Strong", color:"#ff4444", tip:"High surge risk at entries/exits." };
+  if (bigSwell || falling || rising)   return { level:"Moderate", color:"#ffb300", tip:"Plan entry around slack water." };
+  return { level:"Mild", color:"#00ff9d", tip:"Good time to be in the water." };
+}
+
+function diveWetsuit(wt) {
+  if (wt < 13) return { suit:"7mm Semi-dry", icon:"🥶", color:"#60a5fa" };
+  if (wt < 15) return { suit:"5mm Full Suit", icon:"🧊", color:"#93c5fd" };
+  if (wt < 17) return { suit:"5mm or Drysuit", icon:"🌊", color:"#6ee7b7" };
+  return { suit:"3mm Shorty", icon:"🤿", color:"#fde68a" };
+}
+
+// ─── DIVE SITES ───────────────────────────────────────────────────────────────
+const SITES = [
+  // FALSE BAY
+  { id:"millers",      name:"Miller's Point",      lat:-34.2119, lon:18.4644, side:"False Bay",
+    mpa:false, entryType:"Shore — rocky ledge", maxDepth:18, char:"Cape Town's most popular dive. Kelp forests, red Roman, octopus. Multiple entry points.",
+    species:["Hottentot","Red Roman","Octopus","Crayfish","Klipfish"], bestTide:"High incoming" },
+  { id:"boulders",     name:"Boulders Beach",      lat:-34.1980, lon:18.4510, side:"False Bay",
+    mpa:false, entryType:"Shore — sand/boulders", maxDepth:8, char:"Shallow, sheltered bay. Penguins in the water. Great for novice divers.",
+    species:["African Penguin","Steenbras","Shyshark","Sand sharks"], bestTide:"Any" },
+  { id:"partridge",    name:"Partridge Point",      lat:-34.2200, lon:18.4700, side:"False Bay",
+    mpa:false, entryType:"Shore — rocky", maxDepth:22, char:"Dramatic wall and gullies. Excellent visibility. Less crowded than Miller's.",
+    species:["Crayfish","Red Roman","Soupfin shark","Gully sharks"], bestTide:"Slack high" },
+  { id:"roman_rock",   name:"Roman Rock",           lat:-34.1900, lon:18.4600, side:"False Bay",
+    mpa:false, entryType:"Boat", maxDepth:16, char:"Lighthouse pinnacle. Good fish life. Boat access only — arrange charter.",
+    species:["Yellowtail","Hottentot","Dageraad","Elf"], bestTide:"Slack" },
+  { id:"coral",        name:"Coral Gardens",        lat:-34.1720, lon:18.4550, side:"False Bay",
+    mpa:false, entryType:"Shore", maxDepth:12, char:"Colourful sea fans and soft corals. Macro photography heaven.",
+    species:["Pipefish","Seahorse","Nudibranchs","Sea fans"], bestTide:"High" },
+  { id:"kalk_bay_cave",name:"Kalk Bay Cave",        lat:-34.1290, lon:18.4420, side:"False Bay",
+    mpa:false, entryType:"Shore — harbour", maxDepth:10, char:"Sheltered harbour dive. Cave system. Good for nights dives.",
+    species:["Octopus","Cuttlefish","Moray eel","Rock lobster"], bestTide:"Any — sheltered" },
+  { id:"simonstown",   name:"Simon's Town Wreck",   lat:-34.1900, lon:18.4300, side:"False Bay",
+    mpa:false, entryType:"Boat", maxDepth:20, char:"Small wreck with good marine life. Lionfish spotted. Boat recommended.",
+    species:["Lionfish","Klipfish","Moray","Torpedo ray"], bestTide:"Slack" },
+
+  // ATLANTIC SEABOARD
+  { id:"oudekraal",    name:"Oudekraal",            lat:-33.9900, lon:18.3600, side:"Atlantic",
+    mpa:true,  entryType:"Shore — boulders", maxDepth:18, char:"Marine Protected Area. Pristine kelp. Exceptional on calm SE days. Entry can be tricky.",
+    species:["Klipfish","Sea urchins","Cape fur seal","Crayfish (no take)"], bestTide:"High slack" },
+  { id:"camps_bay_reef",name:"Camps Bay Reef",      lat:-33.9510, lon:18.3720, side:"Atlantic",
+    mpa:false, entryType:"Shore", maxDepth:14, char:"Sandy patches with scattered reef. Good viz when flat. Fur seals common.",
+    species:["Cape fur seal","Strepie","Klipfish","Pyjama shark"], bestTide:"High" },
+  { id:"apostles",     name:"The Apostles",         lat:-33.9700, lon:18.3700, side:"Atlantic",
+    mpa:false, entryType:"Boat", maxDepth:25, char:"Deep wall below the mountains. Schooling fish. Boat only.",
+    species:["Yellowtail","Geelbek","Giant kob","Snoek"], bestTide:"Slack high" },
+  { id:"sandy_bay",    name:"Sandy Bay",            lat:-34.0200, lon:18.3500, side:"Atlantic",
+    mpa:false, entryType:"Shore — sand", maxDepth:10, char:"Sandy bottom with reef patches. Good for photography. Informal entry.",
+    species:["Puffer fish","Guitarfish","Sole","Torpedo ray"], bestTide:"Any calm" },
+
+  // WEST COAST
+  { id:"langebaan",    name:"Langebaan Lagoon",     lat:-33.0900, lon:17.9900, side:"West Coast",
+    mpa:true,  entryType:"Shore", maxDepth:6, char:"West Coast National Park MPA. Calm, warm, shallow. Ideal for new divers and photography.",
+    species:["Sea anemone","Klipfish","Sea cucumber","Starfish"], bestTide:"High" },
+  { id:"dassen",       name:"Dassen Island",        lat:-33.4100, lon:18.0500, side:"West Coast",
+    mpa:false, entryType:"Boat — charter", maxDepth:20, char:"Remote island. Penguin colony. Exceptional marine life. Full day trip.",
+    species:["African Penguin","Cape gannet","Yellowtail","Dorado"], bestTide:"Slack" },
+  { id:"paternoster",  name:"Paternoster Reef",     lat:-32.7900, lon:17.8900, side:"West Coast",
+    mpa:false, entryType:"Shore/Boat", maxDepth:15, char:"West Coast gem. Crayfish country. Cold but crystal clear on good days.",
+    species:["Crayfish","Perlemoen (MPA)","Geelbek","Roman"], bestTide:"Slack high" },
+];
+
+const MPA_SITES = SITES.filter(s => s.mpa).map(s => s.id);
+const DIVE_SIDES = ["All", "False Bay", "Atlantic", "West Coast"];
+const DIVE_TABS = [
+  {id:"now",      l:"Now"},
+  {id:"forecast", l:"Forecast"},
+  {id:"tides",    l:"Tides"},
+  {id:"sites",    l:"Sites"},
+  {id:"safety",   l:"Safety"},
+  {id:"gear",     l:"Gear"},
+];
+
+// ─── COMPONENTS ───────────────────────────────────────────────────────────────
+function DepthRing({ value, max, color, label, unit, size=80 }) {
+  const r = 30, circ = 2 * Math.PI * r;
+  const pct = Math.min(value / max, 1);
+  return (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+      <svg width={size} height={size} viewBox="0 0 80 80">
+        <circle cx="40" cy="40" r={r} fill="none" stroke="rgba(0,229,204,0.08)" strokeWidth="5"/>
+        <circle cx="40" cy="40" r={r} fill="none" stroke={color} strokeWidth="5"
+          strokeDasharray={circ} strokeDashoffset={circ*(1-pct)}
+          strokeLinecap="round" transform="rotate(-90 40 40)"
+          style={{transition:"stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)",
+            filter:`drop-shadow(0 0 5px ${color}80)`}}/>
+        <text x="40" y="37" textAnchor="middle" fill="#fff"
+          fontSize="15" fontFamily="'Orbitron',monospace" letterSpacing="0">{value}</text>
+        <text x="40" y="50" textAnchor="middle" fill="rgba(255,255,255,0.35)"
+          fontSize="8" fontFamily="'JetBrains Mono',monospace">{unit}</text>
+      </svg>
+      <div style={{fontSize:7.5,color:"rgba(0,229,204,0.6)",letterSpacing:2,textTransform:"uppercase"}}>{label}</div>
+    </div>
+  );
+}
+
+function WindCompass({ deg, size=52, color="#00e5cc" }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 60 60" style={{flexShrink:0}}>
+      <circle cx="30" cy="30" r="27" fill="none" stroke="rgba(0,229,204,0.08)" strokeWidth="1"/>
+      {["N","E","S","W"].map((d,i) => (
+        <text key={d} x={30+19*Math.sin(i*Math.PI/2)} y={30-19*Math.cos(i*Math.PI/2)+3.5}
+          textAnchor="middle" fill="rgba(0,229,204,0.25)" fontSize="6" fontFamily="monospace">{d}</text>
+      ))}
+      <g transform={`rotate(${deg},30,30)`}>
+        <polygon points="30,7 33,34 30,31 27,34" fill={color} style={{filter:`drop-shadow(0 0 4px ${color})`}}/>
+        <polygon points="30,53 33,34 30,37 27,34" fill={`${color}30`}/>
+      </g>
+    </svg>
+  );
+}
+
+function DTideChart({ curve, curHour }) {
+  const hts = curve.map(p=>p.h), mn=Math.min(...hts), mx=Math.max(...hts);
+  const W=600, H=64;
+  const sx = i=>(i/(curve.length-1))*W;
+  const sy = v=>H-4-((v-mn)/(mx-mn))*(H-14);
+  const pts = curve.map((p,i)=>`${sx(i)},${sy(p.h)}`).join(" ");
+  const ext = tideExtremes(curve);
+  return (
+    <div style={{width:"100%",overflowX:"hidden"}}>
+      <svg viewBox={`0 0 ${W} ${H+26}`} style={{display:"block",width:"100%",height:"auto"}}>
+        <defs>
+          <linearGradient id="tg2" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#00e5cc" stopOpacity="0.2"/>
+            <stop offset="100%" stopColor="#00e5cc" stopOpacity="0.01"/>
+          </linearGradient>
+        </defs>
+        {[0,6,12,18,24,30,36,42].map(h=>(
+          <g key={h}>
+            <line x1={sx(h)} y1={0} x2={sx(h)} y2={H} stroke="rgba(0,229,204,0.06)" strokeWidth="1"/>
+            <text x={sx(h)+2} y={H+16} fill="rgba(0,229,204,0.25)" fontSize="7.5" fontFamily="monospace">
+              {h<24?`${String(h).padStart(2,"0")}h`:`+${h-24}h`}
+            </text>
+          </g>
+        ))}
+        <line x1={sx(24)} y1={0} x2={sx(24)} y2={H} stroke="rgba(0,229,204,0.15)" strokeWidth="1" strokeDasharray="4,3"/>
+        <polygon points={`0,${H} ${pts} ${W},${H}`} fill="url(#tg2)"/>
+        <polyline points={pts} fill="none" stroke="#00e5cc" strokeWidth="1.8" strokeLinejoin="round"/>
+        {ext.slice(0,8).map((e,i)=>(
+          <g key={i}>
+            <circle cx={sx(e.hour)} cy={sy(e.h)} r="3" fill={e.type==="High"?"#00e5cc":"#003d36"}
+              stroke="#00e5cc" strokeWidth="1.5"/>
+            <text x={sx(e.hour)} y={e.type==="High"?sy(e.h)-8:sy(e.h)+14}
+              textAnchor="middle" fill="#00e5cc" fontSize="7" fontFamily="monospace" opacity="0.7">
+              {e.h.toFixed(1)}m
+            </text>
+          </g>
+        ))}
+        {curHour<curve.length&&(
+          <>
+            <line x1={sx(curHour)} y1={0} x2={sx(curHour)} y2={H} stroke="#00ff9d" strokeWidth="1.5" strokeDasharray="4,3"/>
+            <circle cx={sx(curHour)} cy={sy(curve[curHour]?.h??0.82)} r="3.5" fill="#00ff9d"/>
+            <text x={sx(curHour)+5} y={10} fill="#00ff9d" fontSize="7" fontFamily="monospace">NOW</text>
+          </>
+        )}
+      </svg>
+    </div>
+  );
+}
+
+function DForecastStrip({ hourly, curHour }) {
+  if (!hourly) return null;
+  const hours = Array.from({length:12},(_,i)=>curHour+i).filter(h=>h<48);
+  return (
+    <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4,WebkitOverflowScrolling:"touch"}}>
+      {hours.map(h=>{
+        const wh = hourly.wave_height?.[h]??0;
+        const ws = hourly.wind_speed_10m?.[h]??0;
+        const sp = hourly.wave_period?.[h]??0;
+        const v = diveVerdict(wh, ws, sp, 1.0);
+        const isNow = h===curHour;
+        return (
+          <div key={h} style={{flexShrink:0,minWidth:62,
+            background:isNow?"rgba(0,229,204,0.07)":"rgba(0,229,204,0.02)",
+            border:`1px solid ${isNow?"rgba(0,229,204,0.3)":"rgba(0,229,204,0.07)"}`,
+            borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
+            <div style={{fontSize:8,color:isNow?"#00e5cc":"rgba(0,229,204,0.3)",marginBottom:5,letterSpacing:1}}>
+              {h<24?`${String(h).padStart(2,"0")}:00`:`+${h-24}h`}
+            </div>
+            <div style={{fontSize:14,marginBottom:3}}>{v.icon}</div>
+            <div style={{fontFamily:"'Orbitron',monospace",fontSize:11,color:v.color,letterSpacing:0}}>
+              {wh.toFixed(1)}m
+            </div>
+            <div style={{fontSize:7,color:"rgba(0,229,204,0.3)",marginTop:2}}>{ws.toFixed(0)}km/h</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── MAIN APP ─────────────────────────────────────────────────────────────────
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// WaveCheckMode
+// ═══════════════════════════════════════════════════════════════════════════════
+function WaveCheckMode({ setMode }) {
   const [beach, setBeach] = useState(BEACHES[0]);
   const [favs, setFavs] = useState(["muizenberg","bigbay","llandudno"]);
   const [data, setData] = useState(null);
@@ -696,6 +927,18 @@ export default function App() {
               </div>}
             </div>
           </div>
+            <div style={{display:"flex",gap:3,flexShrink:0}}>
+              <button onClick={()=>setMode("surf")} style={{padding:"4px 9px",borderRadius:20,
+                background:"rgba(0,191,255,0.14)",border:"1px solid rgba(0,191,255,0.45)",
+                color:"#7dd3fc",fontFamily:"'Bebas Neue',sans-serif",fontSize:9,letterSpacing:1.5}}>
+                🌊 SURF
+              </button>
+              <button onClick={()=>setMode("dive")} style={{padding:"4px 9px",borderRadius:20,
+                background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",
+                color:"rgba(255,255,255,0.3)",fontFamily:"'Bebas Neue',sans-serif",fontSize:9,letterSpacing:1.5}}>
+                🤿 DIVE
+              </button>
+            </div>
         </div>
 
         <div className="page">
@@ -1200,4 +1443,865 @@ export default function App() {
       </div>
     </>
   );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// DiveCheckMode
+// ═══════════════════════════════════════════════════════════════════════════════
+function DiveCheckMode({ setMode }) {
+  const [site, setSite]               = useState(SITES[0]);
+  const [data, setData]               = useState(null);
+  const [hourly, setHourly]           = useState(null);
+  const [liveSst, setLiveSst]         = useState(null);
+  const [loading, setLoading]         = useState(false);
+  const [refreshing, setRefreshing]   = useState(false);
+  const [err, setErr]                 = useState(null);
+  const [tab, setTab]                 = useState("now");
+  const [filter, setFilter]           = useState("All");
+  const [showPicker, setShowPicker]   = useState(false);
+  const [now, setNow]                 = useState(new Date());
+  const [lastRef, setLastRef]         = useState(null);
+  const [favs, setFavs]               = useState(["millers","oudekraal","langebaan"]);
+  const hr = now.getHours();
+  const siteList = SITES.filter(s => filter==="All" || s.side===filter);
+
+  const fetchData = useCallback(async (s, silent=false) => {
+    silent ? setRefreshing(true) : (setLoading(true), setErr(null), setData(null));
+    try {
+      const cHr = new Date().getHours();
+      const [mr, wr, sr] = await Promise.all([
+        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${s.lat}&longitude=${s.lon}&current=wave_height,wave_period,wave_direction&hourly=wave_height,wave_period,wave_direction&timezone=Africa%2FJohannesburg&forecast_days=3`),
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover,uv_index&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability,wind_gusts_10m&timezone=Africa%2FJohannesburg&forecast_days=3`),
+        fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${s.lat}&longitude=${s.lon}&hourly=sea_surface_temperature&timezone=Africa%2FJohannesburg&forecast_days=1`).catch(()=>null),
+      ]);
+      const m=await mr.json(), w=await wr.json(), ss=sr?await sr.json().catch(()=>null):null;
+      const ws  = w.current?.wind_speed_10m  ?? w.hourly?.wind_speed_10m?.[cHr]  ?? 0;
+      const wd  = w.current?.wind_direction_10m ?? w.hourly?.wind_direction_10m?.[cHr] ?? 0;
+      const tmp = w.current?.temperature_2m  ?? w.hourly?.temperature_2m?.[cHr]  ?? 0;
+      const wg  = w.hourly?.wind_gusts_10m?.[cHr] ?? ws * 1.3;
+      const sst = ss?.hourly?.sea_surface_temperature?.[cHr] ?? null;
+      setLiveSst(sst ? Math.round(sst*10)/10 : null);
+      const wt  = sst ? Math.round(sst*10)/10 : MONTH_TEMP[new Date().getMonth()];
+      const tc  = tide48(new Date());
+      const tl  = tc[cHr]?.h ?? 0.82;
+      const allH = tc.map(t=>t.h), mid = (Math.max(...allH)+Math.min(...allH))/2;
+      const tn  = tc[Math.min(cHr+1,47)]?.h ?? tl;
+      const ts  = tl>tn+0.02?(tl>mid?"High — Falling ↓":"Falling ↓"):tl<tn-0.02?(tl<mid?"Low — Rising ↑":"Rising ↑"):tl>mid?"High Tide":"Low Tide";
+      const wh  = m.current?.wave_height  ?? m.hourly?.wave_height?.[cHr]  ?? 0;
+      const sp  = m.current?.wave_period  ?? m.hourly?.wave_period?.[cHr]  ?? 0;
+      const wdir= m.current?.wave_direction ?? m.hourly?.wave_direction?.[cHr] ?? 0;
+      const h48 = {
+        wave_height:    [...(m.hourly?.wave_height    ?? [])],
+        wave_period:    [...(m.hourly?.wave_period    ?? [])],
+        wind_speed_10m: [...(w.hourly?.wind_speed_10m ?? [])],
+        wind_direction_10m: [...(w.hourly?.wind_direction_10m ?? [])],
+      };
+      setHourly(h48);
+      setData({ wh, sp, wdir, ws, wd, wg, tmp, tl, ts, tides:tc, wt, wc:deg2c(wd), wvc:deg2c(wdir) });
+      setLastRef(new Date());
+      setNow(new Date());
+    } catch {
+      if (!silent) setErr("Couldn't load conditions. Check connection.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(()=>{fetchData(site);},[site,fetchData]);
+  useEffect(()=>{
+    const t=setInterval(()=>fetchData(site,true),60000);
+    return ()=>clearInterval(t);
+  },[site,fetchData]);
+  useEffect(()=>{
+    let m=document.querySelector('meta[name="viewport"]');
+    if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}
+    m.content='width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover';
+    document.documentElement.style.overflowX='hidden';
+    document.body.style.overflowX='hidden';
+  },[]);
+
+  const verdict = data ? diveVerdict(data.wh, data.ws, data.sp, data.tl) : null;
+  const vis     = data ? visibilityEstimate(data.wh, data.sp) : null;
+  const current = data ? currentStrength(data.wh, data.tl, data.ts) : null;
+  const suit    = data ? diveWetsuit(data.wt) : null;
+
+  return (
+    <>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+        html { overflow-x:hidden; -webkit-text-size-adjust:100%; }
+        body { background:#020d0f; overflow-x:hidden; width:100%; overscroll-behavior-x:none; }
+        ::-webkit-scrollbar { width:2px; height:2px; }
+        ::-webkit-scrollbar-thumb { background:rgba(0,229,204,0.15); border-radius:2px; }
+        button { cursor:pointer; border:none; background:none; font-family:inherit; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+        button:focus-visible { outline:2px solid #00e5cc; outline-offset:2px; }
+
+        @keyframes rise   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes spin   { to{transform:rotate(360deg)} }
+        @keyframes shimmer{ 0%,100%{opacity:0.4} 50%{opacity:1} }
+        @keyframes bubbleUp { 0%{transform:translateY(0) scale(1);opacity:0.6} 100%{transform:translateY(-120px) scale(0.4);opacity:0} }
+        @keyframes sonarPing { 0%{transform:scale(0.8);opacity:0.8} 100%{transform:scale(2.2);opacity:0} }
+        @keyframes waveBg1 { to{transform:translateX(-50%)} }
+        @keyframes waveBg2 { from{transform:translateX(-50%)} to{transform:translateX(0)} }
+        @keyframes waveBg3 { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        @keyframes verdictPop { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
+
+        .rise    { animation:rise 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+        .shimmer { animation:shimmer 1.6s ease-in-out infinite; }
+
+        /* Bubble particles */
+        .bubble { position:fixed; border-radius:50%; background:rgba(0,229,204,0.12); pointer-events:none; animation:bubbleUp 6s ease-in infinite; }
+
+        .shell {
+          min-height:100vh;
+          background:
+            radial-gradient(ellipse 100% 50% at 50% 100%, rgba(0,80,70,0.25) 0%, transparent 65%),
+            radial-gradient(ellipse 80% 40% at 20% 60%, rgba(0,40,50,0.2) 0%, transparent 55%),
+            linear-gradient(180deg, #020d0f 0%, #030f12 50%, #020b0d 100%);
+          color:#e0f7f5;
+          font-family:'JetBrains Mono',monospace;
+          padding-bottom:60px;
+          overflow-x:hidden;
+          width:100%; max-width:100vw;
+        }
+        .shell::before {
+          content:'';
+          position:fixed; inset:0;
+          background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+          opacity:0.018; pointer-events:none; z-index:0;
+        }
+
+        .hdr {
+          position:sticky; top:0; z-index:100;
+          display:flex; align-items:center; justify-content:space-between; gap:8px;
+          padding:10px 16px;
+          background:rgba(2,13,15,0.94);
+          backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
+          border-bottom:1px solid rgba(0,229,204,0.1);
+        }
+
+        .page {
+          width:100%; max-width:min(820px,100vw);
+          margin:0 auto; padding:12px 14px;
+          overflow-x:hidden; position:relative; z-index:1;
+        }
+
+        .scroll-row { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+        .scroll-row::-webkit-scrollbar { display:none; }
+
+        .tabs {
+          display:flex; gap:1px;
+          background:rgba(0,229,204,0.04);
+          border:1px solid rgba(0,229,204,0.1);
+          border-radius:10px; padding:3px;
+          margin-bottom:14px;
+        }
+        .tab-btn {
+          flex:1; padding:7px 0; border-radius:7px;
+          font-family:'Orbitron',monospace; font-size:9px; letter-spacing:1px;
+          color:rgba(0,229,204,0.3);
+          transition:all 0.18s; text-align:center; white-space:nowrap; overflow:hidden;
+        }
+        .tab-btn.active {
+          background:linear-gradient(135deg,rgba(0,229,204,0.18) 0%,rgba(0,100,90,0.12) 100%);
+          color:#00e5cc;
+          box-shadow:0 0 14px rgba(0,229,204,0.12), inset 0 1px 0 rgba(0,229,204,0.2);
+          border:1px solid rgba(0,229,204,0.2);
+        }
+        .tab-btn:not(.active):hover { color:rgba(0,229,204,0.55); background:rgba(0,229,204,0.04); }
+
+        .card {
+          background:rgba(0,229,204,0.03);
+          border:1px solid rgba(0,229,204,0.08);
+          border-radius:12px; padding:14px;
+          min-width:0; overflow:hidden;
+        }
+        .card-label {
+          font-size:7.5px; letter-spacing:3px;
+          color:rgba(0,229,204,0.35);
+          text-transform:uppercase; margin-bottom:10px;
+          font-family:'Orbitron',monospace;
+        }
+
+        .hero {
+          border-radius:16px; padding:18px;
+          position:relative; overflow:hidden; margin-bottom:10px;
+        }
+
+        .stat-grid {
+          display:grid; grid-template-columns:1fr 1fr; gap:7px;
+        }
+        @media(min-width:480px){.stat-grid{grid-template-columns:repeat(3,1fr);}}
+        @media(min-width:700px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
+
+        .stat-cell {
+          background:rgba(0,229,204,0.03);
+          border:1px solid rgba(0,229,204,0.07);
+          border-radius:10px; padding:11px 12px; min-width:0;
+        }
+        .stat-label { font-size:7px; letter-spacing:2px; color:rgba(0,229,204,0.3); text-transform:uppercase; margin-bottom:5px; font-family:'Orbitron',monospace; }
+        .stat-value { font-family:'Orbitron',monospace; font-size:18px; color:#e0f7f5; line-height:1.05; }
+        .stat-sub   { font-size:8px; color:rgba(0,229,204,0.35); margin-top:3px; line-height:1.3; }
+
+        /* Ambient wave background */
+        .wave-bg { position:fixed; bottom:0; left:0; width:100%; height:160px; pointer-events:none; z-index:0; opacity:0.035; }
+        .wave1 { animation:waveBg1 20s linear infinite; }
+        .wave2 { animation:waveBg2 15s linear infinite; }
+        .wave3 { animation:waveBg3 28s linear infinite; }
+
+        /* Sonar ping on verdict */
+        .sonar-ring {
+          position:absolute; border-radius:50%;
+          border:1px solid currentColor;
+          animation:sonarPing 2.5s ease-out infinite;
+          pointer-events:none;
+        }
+      `}</style>
+
+      {/* Bubble particles */}
+      {[...Array(6)].map((_,i)=>(
+        <div key={i} className="bubble" style={{
+          width:4+i*2,height:4+i*2,
+          left:`${10+i*14}%`, bottom:`${5+i*8}%`,
+          animationDelay:`${i*1.1}s`, animationDuration:`${5+i*1.5}s`
+        }}/>
+      ))}
+
+      {/* Ambient waves */}
+      <svg className="wave-bg" viewBox="0 0 1440 160" preserveAspectRatio="none">
+        <g className="wave1">
+          <path d="M0,80 C200,35 400,120 600,80 C800,40 1000,120 1200,80 C1400,40 1600,120 1800,80 C2000,40 2200,120 2400,80 L2400,160 L0,160Z" fill="#00e5cc"/>
+        </g>
+        <g className="wave2">
+          <path d="M0,100 C240,65 480,130 720,100 C960,70 1200,130 1440,100 C1680,70 1920,130 2160,100 L2160,160 L0,160Z" fill="#006655" opacity="0.6"/>
+        </g>
+        <g className="wave3">
+          <path d="M0,125 C180,105 360,145 540,125 C720,105 900,145 1080,125 C1260,105 1440,145 1620,125 L1620,160 L0,160Z" fill="#004433" opacity="0.4"/>
+        </g>
+      </svg>
+
+      <div className="shell" style={{position:"relative",zIndex:1}}>
+
+        {/* ── HEADER ── */}
+        <div className="hdr">
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+            <div style={{width:34,height:34,borderRadius:9,
+              background:"linear-gradient(135deg,#004d44,#00e5cc)",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0,
+              boxShadow:"0 0 20px rgba(0,229,204,0.3)"}}>🤿</div>
+            <div>
+              <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,letterSpacing:4,lineHeight:1,color:"#00e5cc"}}>DIVECHECK</div>
+              <div style={{fontSize:7,color:"rgba(0,229,204,0.3)",letterSpacing:3,marginTop:1}}>CAPE TOWN · LIVE</div>
+            </div>
+          </div>
+          <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+            {refreshing && <span className="shimmer" style={{fontSize:7,color:"#00e5cc",letterSpacing:2}}>SYNCING</span>}
+            <div style={{textAlign:"right"}}>
+              <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,color:"rgba(0,229,204,0.5)",letterSpacing:1}}>
+                {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
+              </div>
+              {lastRef && <div style={{fontSize:6.5,color:"rgba(0,229,204,0.2)",letterSpacing:1}}>
+                ↻ {lastRef.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
+              </div>}
+            </div>
+          </div>
+            <div style={{display:"flex",gap:3,flexShrink:0}}>
+              <button onClick={()=>setMode("surf")} style={{padding:"4px 9px",borderRadius:20,
+                background:"rgba(0,229,204,0.03)",border:"1px solid rgba(0,229,204,0.12)",
+                color:"rgba(0,229,204,0.3)",fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>
+                🌊 SURF
+              </button>
+              <button onClick={()=>setMode("dive")} style={{padding:"4px 9px",borderRadius:20,
+                background:"rgba(0,229,204,0.12)",border:"1px solid rgba(0,229,204,0.45)",
+                color:"#00e5cc",fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>
+                🤿 DIVE
+              </button>
+            </div>
+        </div>
+
+        <div className="page">
+
+          {/* ── SITE SELECTOR ── */}
+          <div style={{marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:16,letterSpacing:1,color:"#e0f7f5",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {site.name}
+                </div>
+                {MPA_SITES.includes(site.id) && (
+                  <span style={{fontSize:7,color:"#00ff9d",background:"rgba(0,255,157,0.08)",
+                    border:"1px solid rgba(0,255,157,0.25)",borderRadius:20,padding:"2px 8px",
+                    letterSpacing:1.5,flexShrink:0}}>MPA</span>
+                )}
+                {site.entryType.includes("Boat") && (
+                  <span style={{fontSize:7,color:"#ffb300",background:"rgba(255,179,0,0.08)",
+                    border:"1px solid rgba(255,179,0,0.2)",borderRadius:20,padding:"2px 8px",
+                    letterSpacing:1,flexShrink:0}}>⛵ BOAT</span>
+                )}
+              </div>
+              <div style={{display:"flex",gap:6,flexShrink:0}}>
+                <button onClick={()=>setFavs(p=>p.includes(site.id)?p.filter(x=>x!==site.id):[...p,site.id])}
+                  style={{fontSize:13,color:favs.includes(site.id)?"#ffb300":"rgba(0,229,204,0.2)",transition:"color 0.2s"}}>
+                  {favs.includes(site.id)?"★":"☆"}
+                </button>
+                <button onClick={()=>setShowPicker(p=>!p)}
+                  style={{padding:"5px 12px",borderRadius:20,fontSize:8,letterSpacing:2,
+                    background:showPicker?"rgba(0,229,204,0.1)":"rgba(0,229,204,0.04)",
+                    border:`1px solid ${showPicker?"rgba(0,229,204,0.3)":"rgba(0,229,204,0.1)"}`,
+                    color:showPicker?"#00e5cc":"rgba(0,229,204,0.4)",
+                    fontFamily:"'Orbitron',monospace",fontSize:7}}>
+                  {showPicker?"CLOSE":"CHANGE"}
+                </button>
+              </div>
+            </div>
+
+            {showPicker && (
+              <div style={{background:"rgba(0,0,0,0.4)",border:"1px solid rgba(0,229,204,0.1)",borderRadius:12,padding:"12px",marginBottom:8}}>
+                <div className="scroll-row" style={{marginBottom:8}}>
+                  {DIVE_SIDES.map(s=>(
+                    <button key={s} onClick={()=>setFilter(s)}
+                      style={{flexShrink:0,padding:"4px 12px",borderRadius:100,fontSize:7.5,letterSpacing:2,
+                        fontFamily:"'Orbitron',monospace",transition:"all 0.15s",
+                        background:filter===s?"rgba(0,229,204,0.1)":"rgba(0,229,204,0.03)",
+                        border:`1px solid ${filter===s?"rgba(0,229,204,0.35)":"rgba(0,229,204,0.08)"}`,
+                        color:filter===s?"#00e5cc":"rgba(0,229,204,0.35)"}}>
+                      {s.toUpperCase()}
+                    </button>
+                  ))}
+                </div>
+                <div className="scroll-row">
+                  {siteList.map(s=>(
+                    <button key={s.id} onClick={()=>{setSite(s);setShowPicker(false);}}
+                      style={{flexShrink:0,padding:"6px 14px",borderRadius:100,
+                        fontFamily:"'Orbitron',monospace",fontSize:9,letterSpacing:1,whiteSpace:"nowrap",
+                        transition:"all 0.15s",
+                        background:site.id===s.id?"rgba(0,229,204,0.1)":"rgba(0,229,204,0.03)",
+                        border:`1px solid ${site.id===s.id?"rgba(0,229,204,0.4)":"rgba(0,229,204,0.08)"}`,
+                        color:site.id===s.id?"#00e5cc":"rgba(0,229,204,0.45)"}}>
+                      {s.name}{favs.includes(s.id)?" ★":""}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── LOADING ── */}
+          {loading && (
+            <div style={{textAlign:"center",padding:"60px 0",color:"rgba(0,229,204,0.25)"}}>
+              <div style={{fontSize:36,display:"inline-block",animation:"spin 1.8s linear infinite",marginBottom:14}}>🤿</div>
+              <div style={{fontSize:9,letterSpacing:4,fontFamily:"'Orbitron',monospace"}}>READING THE DEEP…</div>
+            </div>
+          )}
+          {err && (
+            <div style={{background:"rgba(255,68,68,0.06)",border:"1px solid rgba(255,68,68,0.2)",
+              borderRadius:10,padding:"12px 16px",color:"#ff8888",fontSize:11,marginBottom:12}}>
+              ⚠ {err}
+            </div>
+          )}
+
+          {/* ── CONTENT ── */}
+          {data && !loading && (
+            <div className="rise">
+              <div className="tabs">
+                {DIVE_TABS.map(t=>(
+                  <button key={t.id} className={`tab-btn${tab===t.id?" active":""}`} onClick={()=>setTab(t.id)}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
+
+              {/* ════════ NOW ════════ */}
+              {tab==="now" && (
+                <div style={{display:"flex",flexDirection:"column",gap:9}}>
+
+                  {/* DIVE COMPUTER HERO */}
+                  <div className="hero" style={{
+                    background:`linear-gradient(135deg,${verdict.color}10 0%,${verdict.color}04 45%,transparent 70%),linear-gradient(220deg,rgba(0,10,12,0.7) 0%,transparent 55%)`,
+                    border:`1px solid ${verdict.color}30`,
+                    boxShadow:`0 4px 40px ${verdict.color}0a,inset 0 1px 0 ${verdict.color}12`
+                  }}>
+                    {/* Corner glow */}
+                    <div style={{position:"absolute",top:-40,right:-40,width:180,height:180,
+                      background:`radial-gradient(${verdict.color}18,transparent 70%)`,pointerEvents:"none"}}/>
+
+                    {/* Sonar ring on GO */}
+                    {verdict.verdict==="GO" && (
+                      <div className="sonar-ring" style={{
+                        width:60,height:60,top:18,right:18,color:verdict.color
+                      }}/>
+                    )}
+
+                    <div style={{fontSize:7.5,color:"rgba(0,229,204,0.3)",letterSpacing:3,
+                      fontFamily:"'Orbitron',monospace",marginBottom:12}}>
+                      DIVE CONDITIONS — {site.name.toUpperCase()}
+                    </div>
+
+                    {/* Verdict */}
+                    <div style={{display:"flex",alignItems:"center",gap:16,marginBottom:16}}>
+                      <span style={{fontSize:38,flexShrink:0,lineHeight:1}}>{verdict.icon}</span>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontFamily:"'Orbitron',monospace",
+                          fontSize:"clamp(26px,7vw,42px)",lineHeight:1,fontWeight:700,
+                          color:verdict.color,textShadow:`0 0 30px ${verdict.color}50`,
+                          letterSpacing:2}}>
+                          {verdict.verdict}
+                        </div>
+                        <div style={{fontSize:10,color:"rgba(0,229,204,0.45)",marginTop:5,lineHeight:1.4}}>
+                          {verdict.sub}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Depth rings row — key dive metrics */}
+                    <div style={{display:"flex",justifyContent:"space-around",alignItems:"flex-start",
+                      padding:"12px 0",borderTop:`1px solid ${verdict.color}15`,
+                      borderBottom:`1px solid ${verdict.color}15`,marginBottom:12}}>
+                      <DepthRing value={data.wh.toFixed(1)} max={3} color={data.wh<1?"#00ff9d":data.wh<2?"#ffb300":"#ff4444"} label="SWELL" unit="m" size={76}/>
+                      <DepthRing value={data.ws.toFixed(0)} max={50} color={data.ws<15?"#00ff9d":data.ws<25?"#ffb300":"#ff4444"} label="WIND" unit="km/h" size={76}/>
+                      <DepthRing value={data.wt} max={25} color={data.wt>=16?"#fde68a":data.wt>=14?"#6ee7b7":"#93c5fd"} label="WATER" unit="°C" size={76}/>
+                      <DepthRing value={data.tl.toFixed(1)} max={2} color="#00e5cc" label="TIDE" unit="m" size={76}/>
+                    </div>
+
+                    {/* Condition pills */}
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                      {[
+                        {l:`~${vis.est} viz`, icon:"👁", c:vis.color},
+                        {l:current.level+" current", icon:"🌀", c:current.color},
+                        {l:`${data.wc} ${data.ws.toFixed(0)}km/h`, icon:"💨", c:data.ws<15?"#00ff9d":data.ws<25?"#ffb300":"#ff4444"},
+                        {l:data.ts, icon:"🌊", c:"#00e5cc"},
+                        {l:site.entryType.split("—")[0].trim(), icon:"🪨", c:"rgba(0,229,204,0.7)"},
+                      ].map((p,i)=>(
+                        <div key={i} style={{display:"flex",alignItems:"center",gap:5,
+                          background:`${p.c}0e`,border:`1px solid ${p.c}28`,
+                          borderRadius:20,padding:"4px 10px"}}>
+                          <span style={{fontSize:10}}>{p.icon}</span>
+                          <span style={{fontSize:8,color:p.c,letterSpacing:0.5,fontFamily:"'JetBrains Mono',monospace"}}>{p.l}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* QUICK STATS ROW */}
+                  <div style={{display:"flex",gap:7}}>
+                    <div style={{flex:1,background:"rgba(0,229,204,0.03)",border:"1px solid rgba(0,229,204,0.1)",borderRadius:11,padding:"12px 14px"}}>
+                      <div className="card-label">💨 WIND</div>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <WindCompass deg={data.wd} size={42} color={data.ws<15?"#00ff9d":data.ws<25?"#ffb300":"#ff4444"}/>
+                        <div style={{minWidth:0}}>
+                          <div style={{fontFamily:"'Orbitron',monospace",fontSize:15,
+                            color:data.ws<15?"#00ff9d":data.ws<25?"#ffb300":"#ff4444"}}>
+                            {data.ws.toFixed(0)}<span style={{fontSize:9,opacity:0.6}}> km/h</span>
+                          </div>
+                          <div style={{fontSize:8,color:"rgba(0,229,204,0.35)",marginTop:1}}>
+                            {data.wc} · Gusts {data.wg.toFixed(0)}km/h
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{flex:1,background:"rgba(0,229,204,0.03)",border:"1px solid rgba(0,229,204,0.1)",borderRadius:11,padding:"12px 14px"}}>
+                      <div className="card-label">🌊 SWELL</div>
+                      <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,color:"#e0f7f5",marginBottom:3}}>
+                        {data.wh.toFixed(1)}<span style={{fontSize:10,opacity:0.5}}>m</span>
+                      </div>
+                      <div style={{fontSize:8,color:"rgba(0,229,204,0.35)"}}>
+                        {data.sp.toFixed(0)}s · {data.wvc}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* VISIBILITY + CURRENT */}
+                  <div style={{display:"flex",gap:7}}>
+                    <div style={{flex:1,background:`${vis.color}08`,border:`1px solid ${vis.color}20`,borderRadius:11,padding:"12px 14px"}}>
+                      <div className="card-label" style={{color:`${vis.color}60`}}>👁 EST. VISIBILITY</div>
+                      <div style={{fontFamily:"'Orbitron',monospace",fontSize:20,color:vis.color,lineHeight:1}}>{vis.est}</div>
+                      <div style={{fontSize:8,color:"rgba(0,229,204,0.3)",marginTop:4}}>Based on swell · not real-time</div>
+                    </div>
+                    <div style={{flex:1,background:`${current.color}08`,border:`1px solid ${current.color}20`,borderRadius:11,padding:"12px 14px"}}>
+                      <div className="card-label" style={{color:`${current.color}60`}}>🌀 CURRENT</div>
+                      <div style={{fontFamily:"'Orbitron',monospace",fontSize:20,color:current.color,lineHeight:1}}>{current.level}</div>
+                      <div style={{fontSize:8,color:"rgba(0,229,204,0.3)",marginTop:4}}>{current.tip}</div>
+                    </div>
+                  </div>
+
+                  {/* SITE NOTES */}
+                  <div className="card">
+                    <div className="card-label">📍 SITE NOTES — {site.name.toUpperCase()}</div>
+                    <p style={{fontSize:11,color:"rgba(0,229,204,0.5)",lineHeight:1.65,marginBottom:10}}>{site.char}</p>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
+                      <span style={{fontSize:8,color:"#00e5cc",background:"rgba(0,229,204,0.07)",border:"1px solid rgba(0,229,204,0.15)",borderRadius:20,padding:"3px 9px",letterSpacing:1}}>
+                        ⬇ {site.maxDepth}m MAX
+                      </span>
+                      <span style={{fontSize:8,color:"#00e5cc",background:"rgba(0,229,204,0.07)",border:"1px solid rgba(0,229,204,0.15)",borderRadius:20,padding:"3px 9px",letterSpacing:1}}>
+                        🪨 {site.entryType}
+                      </span>
+                      <span style={{fontSize:8,color:"#00e5cc",background:"rgba(0,229,204,0.07)",border:"1px solid rgba(0,229,204,0.15)",borderRadius:20,padding:"3px 9px",letterSpacing:1}}>
+                        🌊 {site.bestTide}
+                      </span>
+                      {MPA_SITES.includes(site.id) && (
+                        <span style={{fontSize:8,color:"#00ff9d",background:"rgba(0,255,157,0.07)",border:"1px solid rgba(0,255,157,0.2)",borderRadius:20,padding:"3px 9px",letterSpacing:1}}>
+                          🌿 MPA — No Take
+                        </span>
+                      )}
+                    </div>
+                    <div className="card-label" style={{marginBottom:6}}>SPECIES</div>
+                    <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                      {site.species.map((sp,i)=>(
+                        <span key={i} style={{fontSize:8,color:"rgba(0,229,204,0.55)",background:"rgba(0,229,204,0.04)",
+                          border:"1px solid rgba(0,229,204,0.1)",borderRadius:20,padding:"3px 9px"}}>
+                          {sp}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                </div>
+              )}
+
+              {/* ════════ FORECAST ════════ */}
+              {tab==="forecast" && (
+                <div style={{display:"flex",flexDirection:"column",gap:14}}>
+                  <div>
+                    <div className="card-label">NEXT 12 HOURS</div>
+                    <DForecastStrip hourly={hourly} curHour={hr}/>
+                  </div>
+
+                  {/* 5 day */}
+                  <div>
+                    <div className="card-label">5-DAY OUTLOOK</div>
+                    <div style={{display:"flex",gap:6}}>
+                      {Array.from({length:5},(_,d)=>{
+                        const DNAMES=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+                        const lbl=d===0?"Today":d===1?"Tmrw":DNAMES[(now.getDay()+d)%7];
+                        const avgWh = Array.from({length:24},(_,h)=>hourly.wave_height?.[d*24+h]??0).reduce((a,b)=>a+b,0)/24;
+                        const avgWs = Array.from({length:24},(_,h)=>hourly.wind_speed_10m?.[d*24+h]??0).reduce((a,b)=>a+b,0)/24;
+                        const v = diveVerdict(avgWh, avgWs, 8, 1.0);
+                        return (
+                          <div key={d} style={{flex:"1 1 0",minWidth:0,
+                            background:d===0?"rgba(0,229,204,0.05)":"rgba(0,229,204,0.02)",
+                            border:`1px solid ${d===0?"rgba(0,229,204,0.2)":"rgba(0,229,204,0.07)"}`,
+                            borderRadius:10,padding:"12px 6px",textAlign:"center"}}>
+                            <div style={{fontSize:7.5,color:d===0?"#00e5cc":"rgba(0,229,204,0.3)",marginBottom:7,letterSpacing:1,fontFamily:"'Orbitron',monospace"}}>
+                              {lbl.toUpperCase()}
+                            </div>
+                            <div style={{fontSize:16,marginBottom:4}}>{v.icon}</div>
+                            <div style={{fontFamily:"'Orbitron',monospace",fontSize:9,color:v.color,letterSpacing:1}}>
+                              {v.verdict}
+                            </div>
+                            <div style={{fontSize:8,color:"rgba(0,229,204,0.3)",marginTop:3}}>
+                              {avgWh.toFixed(1)}m avg
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="card">
+                    <div className="card-label">⚠️ NOTE ON VISIBILITY</div>
+                    <p style={{fontSize:10.5,color:"rgba(0,229,204,0.45)",lineHeight:1.6}}>
+                      Visibility estimates are derived from swell height and period only. Actual viz depends on
+                      kelp, currents, river runoff, and algae bloom — none of which are forecast-able in real time.
+                      Chlorophyll satellite data (historic only) available via{" "}
+                      <span style={{color:"#00e5cc"}}>CMEMS copernicus.eu</span>.
+                      Always assess on the day.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ════════ TIDES ════════ */}
+              {tab==="tides" && (
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  <div className="card">
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+                      <span className="card-label" style={{color:"rgba(0,229,204,0.5)",margin:0}}>48H TIDE CURVE</span>
+                      <span style={{fontSize:8,color:"#00ff9d",letterSpacing:1.5}}>HARMONIC ✓</span>
+                    </div>
+                    <DTideChart curve={data.tides} curHour={hr}/>
+                  </div>
+
+                  <div className="card-label" style={{marginTop:4}}>HIGHS & LOWS</div>
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {tideExtremes(data.tides).slice(0,6).map((e,i)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                        background:"rgba(0,229,204,0.03)",border:"1px solid rgba(0,229,204,0.08)",
+                        borderRadius:10,padding:"12px 14px"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:10}}>
+                          <span style={{fontSize:18}}>{e.type==="High"?"🌊":"🏖️"}</span>
+                          <div>
+                            <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,
+                              color:e.type==="High"?"#00e5cc":"#ffb300",letterSpacing:1}}>
+                              {e.type} Tide
+                            </div>
+                            <div style={{fontSize:8,color:"rgba(0,229,204,0.3)",marginTop:2}}>
+                              {e.hour<24?`${String(e.hour).padStart(2,"0")}:00`:`Tomorrow ${String(e.hour-24).padStart(2,"0")}:00`}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:20,color:"#e0f7f5"}}>
+                          {e.h.toFixed(2)}<span style={{fontSize:10,color:"rgba(0,229,204,0.35)"}}>m</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="card" style={{background:"rgba(0,229,204,0.03)"}}>
+                    <div className="card-label">💡 DIVE & TIDE</div>
+                    <p style={{fontSize:10.5,color:"rgba(0,229,204,0.45)",lineHeight:1.65}}>
+                      Best diving is typically at <span style={{color:"#00e5cc"}}>high slack water</span> — 
+                      silt has settled, surge is minimal, and marine life is active.
+                      Avoid the last two hours of an ebb tide at exposed sites — strong outflow increases current and stirs sediment.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ════════ SITES ════════ */}
+              {tab==="sites" && (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <div style={{fontSize:8,color:"rgba(0,229,204,0.3)",letterSpacing:2,marginBottom:4,fontFamily:"'Orbitron',monospace"}}>
+                    ALL CAPE TOWN DIVE SITES
+                  </div>
+
+                  {/* MPA note */}
+                  <div style={{background:"rgba(0,255,157,0.05)",border:"1px solid rgba(0,255,157,0.15)",
+                    borderRadius:10,padding:"10px 14px",display:"flex",alignItems:"center",gap:10,marginBottom:4}}>
+                    <span style={{fontSize:16}}>🌿</span>
+                    <div style={{fontSize:9,color:"rgba(0,255,157,0.7)",lineHeight:1.5}}>
+                      <strong style={{color:"#00ff9d"}}>MPA sites</strong> — Marine Protected Areas. No removal of any species. Spearfishing prohibited.
+                      Check <span style={{color:"#00ff9d"}}>dffe.gov.za</span> for current regulations.
+                    </div>
+                  </div>
+
+                  {SIDES.filter(s=>s!=="All").map(side=>(
+                    <div key={side}>
+                      <div className="card-label" style={{marginTop:8,marginBottom:6}}>{side.toUpperCase()}</div>
+                      {SITES.filter(s=>s.side===side).map(s=>{
+                        const isActive = s.id === site.id;
+                        return (
+                          <button key={s.id} onClick={()=>{setSite(s);setTab("now");}}
+                            style={{display:"flex",alignItems:"center",gap:12,width:"100%",
+                              background:isActive?"rgba(0,229,204,0.07)":"rgba(0,229,204,0.02)",
+                              border:`1px solid ${isActive?"rgba(0,229,204,0.3)":"rgba(0,229,204,0.06)"}`,
+                              borderRadius:10,padding:"11px 14px",textAlign:"left",cursor:"pointer",
+                              transition:"all 0.15s",marginBottom:5}}>
+                            <div style={{flex:1,minWidth:0}}>
+                              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                                <span style={{fontSize:11,color:isActive?"#00e5cc":"rgba(0,229,204,0.7)",
+                                  fontFamily:"'Orbitron',monospace",letterSpacing:0.5}}>{s.name}</span>
+                                {s.mpa && <span style={{fontSize:6.5,color:"#00ff9d",border:"1px solid rgba(0,255,157,0.3)",borderRadius:10,padding:"1px 6px",letterSpacing:1}}>MPA</span>}
+                                {s.entryType.includes("Boat") && <span style={{fontSize:6.5,color:"#ffb300",border:"1px solid rgba(255,179,0,0.3)",borderRadius:10,padding:"1px 6px"}}>⛵</span>}
+                              </div>
+                              <div style={{fontSize:8,color:"rgba(0,229,204,0.35)",lineHeight:1.4}}>{s.char.slice(0,70)}…</div>
+                            </div>
+                            <div style={{flexShrink:0,textAlign:"right"}}>
+                              <div style={{fontSize:9,color:"rgba(0,229,204,0.5)",fontFamily:"'Orbitron',monospace"}}>⬇{s.maxDepth}m</div>
+                              {favs.includes(s.id) && <div style={{fontSize:10,color:"#ffb300",marginTop:2}}>★</div>}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ))}
+
+                  {/* MPA map link */}
+                  <div className="card" style={{marginTop:4}}>
+                    <div className="card-label">🗺 MARINE PROTECTED AREAS</div>
+                    <p style={{fontSize:10.5,color:"rgba(0,229,204,0.45)",lineHeight:1.6,marginBottom:8}}>
+                      Full MPA boundary map for Cape Town waters:
+                    </p>
+                    <div style={{background:"rgba(0,229,204,0.06)",border:"1px solid rgba(0,229,204,0.15)",
+                      borderRadius:8,padding:"10px 12px",fontSize:9,color:"#00e5cc",letterSpacing:1,
+                      fontFamily:"'Orbitron',monospace",wordBreak:"break-all"}}>
+                      maps.google.com → search "Cape Town Marine Protected Areas"
+                    </div>
+                    <p style={{fontSize:9,color:"rgba(0,229,204,0.3)",marginTop:8,lineHeight:1.5}}>
+                      Or visit <span style={{color:"#00e5cc"}}>dffe.gov.za/mpa</span> for official boundaries and regulations.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ════════ SAFETY ════════ */}
+              {tab==="safety" && (
+                <div style={{display:"flex",flexDirection:"column",gap:9}}>
+
+                  {/* Current risk */}
+                  <div style={{background:`${current.color}08`,border:`1px solid ${current.color}25`,borderRadius:12,padding:"14px"}}>
+                    <div className="card-label">🌀 SURGE & CURRENT</div>
+                    <div style={{display:"flex",alignItems:"center",gap:12}}>
+                      <div style={{fontFamily:"'Orbitron',monospace",fontSize:22,color:current.color,flexShrink:0}}>{current.level}</div>
+                      <div style={{fontSize:10.5,color:"rgba(0,229,204,0.45)",lineHeight:1.5}}>{current.tip}</div>
+                    </div>
+                  </div>
+
+                  {/* MPA warning if applicable */}
+                  {MPA_SITES.includes(site.id) && (
+                    <div style={{background:"rgba(0,255,157,0.06)",border:"1px solid rgba(0,255,157,0.25)",borderRadius:12,padding:"14px"}}>
+                      <div className="card-label" style={{color:"rgba(0,255,157,0.5)"}}>🌿 MARINE PROTECTED AREA</div>
+                      <p style={{fontSize:10.5,color:"rgba(0,229,204,0.45)",lineHeight:1.6}}>
+                        <strong style={{color:"#00ff9d"}}>{site.name}</strong> is inside a Marine Protected Area.
+                        Removal of any organism — including crayfish, fish, shells, or coral — is a criminal offence.
+                        Spearfishing and collection strictly prohibited.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Boat entry warning */}
+                  {site.entryType.includes("Boat") && (
+                    <div style={{background:"rgba(255,179,0,0.06)",border:"1px solid rgba(255,179,0,0.25)",borderRadius:12,padding:"14px"}}>
+                      <div className="card-label" style={{color:"rgba(255,179,0,0.5)"}}>⛵ BOAT ACCESS REQUIRED</div>
+                      <p style={{fontSize:10.5,color:"rgba(0,229,204,0.45)",lineHeight:1.6}}>
+                        {site.name} requires boat access. Arrange with a licensed Cape Town dive charter.
+                        Ensure skipper has valid SAMSA certification and dive flag is deployed.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Bag & size limits */}
+                  <div className="card">
+                    <div className="card-label">📋 SPECIES & BAG LIMITS</div>
+                    <p style={{fontSize:10.5,color:"rgba(0,229,204,0.45)",lineHeight:1.6,marginBottom:10}}>
+                      Daily bag and size limits apply to recreational fishing and spearfishing in South Africa.
+                      Limits change — always check the latest before you dive.
+                    </p>
+                    <div style={{background:"rgba(0,229,204,0.06)",border:"1px solid rgba(0,229,204,0.15)",
+                      borderRadius:8,padding:"10px 12px"}}>
+                      <div style={{fontSize:8,color:"rgba(0,229,204,0.5)",letterSpacing:2,marginBottom:6,fontFamily:"'Orbitron',monospace"}}>OFFICIAL SOURCES</div>
+                      {[
+                        {l:"DFFE Recreational Fishing Guide","u":"dalrrd.gov.za"},
+                        {l:"SA Recreational Fishing App","u":"sarecfishing.co.za"},
+                        {l:"Two Oceans Aquarium species ID","u":"aquarium.co.za"},
+                      ].map((r,i)=>(
+                        <div key={i} style={{fontSize:9,color:"#00e5cc",marginBottom:4,letterSpacing:0.5}}>
+                          → {r.l} <span style={{color:"rgba(0,229,204,0.4)"}}>({r.u})</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* General safety */}
+                  <div className="card">
+                    <div className="card-label">🛟 DIVE SAFETY</div>
+                    {[
+                      "Never dive alone — always use the buddy system",
+                      "Check SADS dive flag regulations — flag must be visible",
+                      "Log your dive plan with someone on shore",
+                      "Cold Atlantic water: watch for cold shock and hypothermia",
+                      "Kelp can disorient — stay calm, ascend slowly through gaps",
+                      "NSRI emergency: 082 990 5922",
+                    ].map((tip,i,arr)=>(
+                      <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"7px 0",
+                        borderBottom:i<arr.length-1?"1px solid rgba(0,229,204,0.05)":"none"}}>
+                        <span style={{color:"#00e5cc",fontSize:10,flexShrink:0,marginTop:1}}>›</span>
+                        <span style={{fontSize:10,color:"rgba(0,229,204,0.5)",lineHeight:1.5}}>{tip}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* ════════ GEAR ════════ */}
+              {tab==="gear" && (
+                <div style={{display:"flex",flexDirection:"column",gap:9}}>
+
+                  {/* Wetsuit */}
+                  <div style={{background:`${suit.color}0d`,border:`1px solid ${suit.color}30`,borderRadius:14,padding:"16px"}}>
+                    <div className="card-label">🤿 WETSUIT</div>
+                    <div style={{display:"flex",alignItems:"center",gap:14}}>
+                      <span style={{fontSize:42,flexShrink:0,lineHeight:1}}>{suit.icon}</span>
+                      <div>
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,color:suit.color,letterSpacing:1,lineHeight:1.1}}>
+                          {suit.suit}
+                        </div>
+                        <div style={{fontSize:9,color:"rgba(0,229,204,0.35)",marginTop:4}}>
+                          Water {data.wt}°C {liveSst?"(live SST)":"(seasonal avg)"}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Cape Town specific wetsuit note */}
+                  <div className="card">
+                    <div className="card-label">🌡 CAPE TOWN WATER TEMPS</div>
+                    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                      {[
+                        {season:"Summer (Dec–Feb)", temp:"17–19°C", suit:"3mm shorty or 5mm"},
+                        {season:"Autumn (Mar–May)",  temp:"15–17°C", suit:"5mm full suit"},
+                        {season:"Winter (Jun–Aug)",  temp:"13–15°C", suit:"5mm + hood"},
+                        {season:"Spring (Sep–Nov)",  temp:"13–16°C", suit:"5mm full suit"},
+                      ].map((r,i)=>(
+                        <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                          padding:"8px 0",borderBottom:i<3?"1px solid rgba(0,229,204,0.05)":"none"}}>
+                          <div>
+                            <div style={{fontSize:10,color:"rgba(0,229,204,0.7)"}}>{r.season}</div>
+                            <div style={{fontSize:8,color:"rgba(0,229,204,0.35)",marginTop:2}}>{r.suit}</div>
+                          </div>
+                          <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:"#00e5cc"}}>{r.temp}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Checklist */}
+                  <div className="card">
+                    <div className="card-label">📋 PRE-DIVE CHECKLIST</div>
+                    {[
+                      {item:suit.suit, icon:suit.icon, show:true},
+                      {item:"BCD fully inflated check", icon:"🫧", show:true},
+                      {item:"Regulator breathing test", icon:"😮‍💨", show:true},
+                      {item:"Tank pressure — 200+ bar", icon:"🔴", show:true},
+                      {item:"Weight belt / integrated weights", icon:"⚓", show:true},
+                      {item:"Dive computer charged", icon:"⌚", show:true},
+                      {item:"SMB + reel", icon:"🟠", show:true},
+                      {item:"Dive knife or cutter", icon:"🔱", show:true},
+                      {item:"Hood + gloves", icon:"🥶", show:data.wt<16},
+                      {item:"Torch (night/cave dive)", icon:"🔦", show:false},
+                      {item:"Buddy check — BWRAF", icon:"🤝", show:true},
+                      {item:"Dive flag deployed", icon:"🚩", show:true},
+                    ].filter(g=>g.show).map((g,i,arr)=>(
+                      <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",
+                        borderBottom:i<arr.length-1?"1px solid rgba(0,229,204,0.04)":"none"}}>
+                        <span style={{fontSize:14,flexShrink:0,width:22,textAlign:"center"}}>{g.icon}</span>
+                        <span style={{fontSize:10,color:"rgba(0,229,204,0.5)",flex:1}}>{g.item}</span>
+                        <span style={{color:"#00ff9d",fontSize:11,flexShrink:0}}>✓</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* FOOTER */}
+              <div style={{marginTop:18,padding:"10px 14px",borderTop:"1px solid rgba(0,229,204,0.06)"}}>
+                <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:5}}>
+                  {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"Live SST ✓":"Seasonal model"),"TIDES: Harmonic"].map(s=>(
+                    <span key={s} style={{fontSize:7.5,color:"#00e5cc",background:"rgba(0,229,204,0.04)",
+                      border:"1px solid rgba(0,229,204,0.1)",borderRadius:4,padding:"2px 7px",letterSpacing:0.5,
+                      fontFamily:"'Orbitron',monospace",fontSize:6.5}}>{s}</span>
+                  ))}
+                </div>
+                <div style={{fontSize:7,color:"rgba(0,229,204,0.12)",letterSpacing:1}}>
+                  {site.lat}°S · {Math.abs(site.lon)}°E · Auto-refresh 60s · Conditions indicative only · Always dive with a buddy
+                </div>
+              </div>
+
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ROOT APP
+// ═══════════════════════════════════════════════════════════════════════════════
+export default function App() {
+  const [mode, setMode] = useState("surf");
+  return mode === "surf"
+    ? <WaveCheckMode setMode={setMode} />
+    : <DiveCheckMode setMode={setMode} />;
 }
