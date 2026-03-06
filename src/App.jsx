@@ -652,10 +652,6 @@ function WaveCheckMode({ setMode }) {
   const [detailExpanded, setDetailExpanded] = useState(false);
   const hr = now.getHours();
 
-  useEffect(()=>{
-    setNotifGranted("Notification" in window && Notification.permission === "granted");
-  },[]);
-
   const fetchData = useCallback(async(b, silent=false)=>{
     silent ? setRefreshing(true) : (setLoading(true), setErr(null), setData(null));
     try {
