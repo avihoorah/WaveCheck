@@ -995,18 +995,18 @@ function WaveCheckMode({ setMode }) {
           {/* ── BEACH SELECTOR ── */}
           <div style={{marginBottom:14}}>
             {/* Compact current beach + change */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:22,letterSpacing:2,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
                   {beach.name}
                 </div>
-                <span style={{fontSize:7.5,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1.5,flexShrink:0,
+                <span style={{fontSize:7,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1,flexShrink:0,
                   background:`${LVL_COLOR[beach.level]??'#888'}15`,border:`1px solid ${LVL_COLOR[beach.level]??'#888'}30`,
-                  borderRadius:20,padding:"3px 8px"}}>
+                  borderRadius:20,padding:"2px 7px"}}>
                   {beach.level.toUpperCase()}
                 </span>
-                {SHARK.includes(beach.id) && <span style={{fontSize:7,color:"#f87171",letterSpacing:1,flexShrink:0}}>🦈</span>}
-                {beach.rip && <span style={{fontSize:7,color:"#fbbf24",letterSpacing:1,flexShrink:0}}>⚡</span>}
+                {SHARK.includes(beach.id) && <span style={{fontSize:7,flexShrink:0}}>🦈</span>}
+                {beach.rip && <span style={{fontSize:7,flexShrink:0}}>⚡</span>}
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0}}>
                 <button onClick={()=>setFavs(p=>p.includes(beach.id)?p.filter(x=>x!==beach.id):[...p,beach.id])}
@@ -1759,17 +1759,17 @@ function DiveCheckMode({ setMode }) {
 
         {/* ── HEADER ── */}
         <div className="hdr">
-          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
-            <div style={{width:34,height:34,borderRadius:9,
-              background:"linear-gradient(135deg,#004d44,#00e5cc)",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0,
-              boxShadow:"0 0 20px rgba(0,229,204,0.3)"}}>🤿</div>
-            <div>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,letterSpacing:4,lineHeight:1,color:"#00e5cc"}}>DIVECHECK</div>
-              <div style={{fontSize:7,color:"rgba(0,229,204,0.3)",letterSpacing:3,marginTop:1}}>CAPE TOWN · LIVE</div>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}}>
+            <div style={{width:32,height:32,borderRadius:8,
+              background:"linear-gradient(135deg,rgba(0,60,55,0.6),rgba(0,229,204,0.25))",
+              border:"1px solid rgba(0,229,204,0.22)",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🤿</div>
+            <div style={{minWidth:0}}>
+              <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>DIVECHECK</div>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,229,204,0.4)",letterSpacing:2,marginTop:2}}>CAPE TOWN · DIVE</div>
             </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {refreshing && <span className="shimmer" style={{fontFamily:"'Orbitron',monospace",fontSize:6.5,color:"#00e5cc",letterSpacing:2}}>SYNCING</span>}
             <div style={{textAlign:"right"}}>
               <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:"rgba(255,255,255,0.5)",letterSpacing:1}}>
@@ -1779,31 +1779,31 @@ function DiveCheckMode({ setMode }) {
                 ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}
               </div>}
             </div>
-          </div>
             <div className="mode-pill">
               <button className="mode-btn inactive" onClick={()=>setMode("surf")}>🌊 SURF</button>
               <button className="mode-btn dive-active" onClick={()=>setMode("dive")}>🤿 DIVE</button>
             </div>
+          </div>
         </div>
 
         <div className="page">
 
           {/* ── SITE SELECTOR ── */}
           <div style={{marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:16,letterSpacing:1,color:"#e0f7f5",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8}}>
+              <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:16,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
                   {site.name}
                 </div>
                 {MPA_SITES.includes(site.id) && (
                   <span style={{fontSize:7,color:"#00ff9d",background:"rgba(0,255,157,0.08)",
-                    border:"1px solid rgba(0,255,157,0.25)",borderRadius:20,padding:"2px 8px",
+                    border:"1px solid rgba(0,255,157,0.25)",borderRadius:20,padding:"2px 7px",
                     letterSpacing:1.5,flexShrink:0}}>MPA</span>
                 )}
                 {site.entryType.includes("Boat") && (
                   <span style={{fontSize:7,color:"#ffb300",background:"rgba(255,179,0,0.08)",
-                    border:"1px solid rgba(255,179,0,0.2)",borderRadius:20,padding:"2px 8px",
-                    letterSpacing:1,flexShrink:0}}>⛵ BOAT</span>
+                    border:"1px solid rgba(255,179,0,0.2)",borderRadius:20,padding:"2px 7px",
+                    letterSpacing:1,flexShrink:0}}>⛵</span>
                 )}
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0}}>
