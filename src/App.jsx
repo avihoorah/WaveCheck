@@ -41,9 +41,9 @@ function SharedHeader({ mode, setMode, meta }) {
         <div style={{width:32,height:32,borderRadius:8,background:bg,border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
           {isSurf ? "🌊" : "🤿"}
         </div>
-        <div style={{minWidth:0,flex:1}}>
-          <div style={{display:"flex",alignItems:"baseline",gap:8,minWidth:0,flexWrap:"wrap"}}>
-            <div className="shared-brand">{isSurf ? "WAVECHECK" : "DIVECHECK"}</div>
+        <div style={{minWidth:0,flex:1,overflow:"hidden"}}>
+          <div style={{display:"flex",alignItems:"baseline",gap:6,minWidth:0,overflow:"hidden"}}>
+            <div className="shared-brand" style={{flexShrink:0}}>{isSurf ? "WAVECHECK" : "DIVECHECK"}</div>
             {meta?.title && <div className="shared-location">{meta.title}</div>}
           </div>
           <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2,minWidth:0,flexWrap:"wrap"}}>
@@ -1250,7 +1250,7 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
             {/* Compact current beach + change */}
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:38}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0,maxWidth:"calc(100% - 100px)"}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0,flex:1}}>
                   {beach.name}
                 </div>
                 <span style={{fontSize:7,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1,flexShrink:0,
@@ -1263,20 +1263,20 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                 <button onClick={()=>setFavs(p=>p.includes(beach.id)?p.filter(x=>x!==beach.id):[...p,beach.id])}
-                  style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:15,color:favs.includes(beach.id)?"#fbbf24":"rgba(255,255,255,0.2)",
-                    background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
-                    transition:"color 0.2s,border-color 0.2s",flexShrink:0}}>
+                  style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:14,color:favs.includes(beach.id)?"#ffb300":"rgba(255,255,255,0.25)",
+                    background:"transparent",border:"none",
+                    transition:"color 0.2s",flexShrink:0}}>
                   {favs.includes(beach.id)?"★":"☆"}
                 </button>
                 <button onClick={()=>setShowBeachPicker(p=>!p)}
-                  style={{height:32,padding:"0 14px",borderRadius:20,fontSize:14,letterSpacing:0,
-                    display:"flex",alignItems:"center",gap:5,
-                    background:showBeachPicker?"rgba(0,191,255,0.14)":"rgba(255,255,255,0.06)",
+                  style={{height:28,padding:"0 12px",borderRadius:20,
+                    display:"flex",alignItems:"center",gap:4,
+                    background:showBeachPicker?"rgba(0,191,255,0.14)":"rgba(255,255,255,0.05)",
                     border:`1px solid ${showBeachPicker?"rgba(0,191,255,0.35)":"rgba(255,255,255,0.1)"}`,
-                    color:showBeachPicker?"#7dd3fc":"rgba(255,255,255,0.5)"}}>
-                  <span style={{fontSize:14}}>📍</span>
-                  <span style={{fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>{showBeachPicker?"CLOSE":"CHANGE"}</span>
+                    color:showBeachPicker?"#7dd3fc":"rgba(255,255,255,0.45)"}}>
+                  <span style={{fontSize:12}}>📍</span>
+                  <span style={{fontFamily:"'Orbitron',monospace",fontSize:7.5,letterSpacing:1}}>{showBeachPicker?"CLOSE":"CHANGE"}</span>
                 </button>
               </div>
             </div>
@@ -2330,7 +2330,7 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           <div style={{marginBottom:14}}>
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:38}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0,maxWidth:"calc(100% - 100px)"}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0,flex:1}}>
                   {site.name}
                 </div>
                 {MPA_SITES.includes(site.id) && (
@@ -2346,20 +2346,20 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                 <button onClick={()=>setFavs(p=>p.includes(site.id)?p.filter(x=>x!==site.id):[...p,site.id])}
-                  style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:15,color:favs.includes(site.id)?"#ffb300":"rgba(0,229,204,0.25)",
-                    background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.1)",
-                    transition:"color 0.2s,border-color 0.2s",flexShrink:0}}>
+                  style={{width:28,height:28,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:14,color:favs.includes(site.id)?"#ffb300":"rgba(0,229,204,0.3)",
+                    background:"transparent",border:"none",
+                    transition:"color 0.2s",flexShrink:0}}>
                   {favs.includes(site.id)?"★":"☆"}
                 </button>
                 <button onClick={()=>setShowPicker(p=>!p)}
-                  style={{height:32,padding:"0 14px",borderRadius:20,fontSize:14,letterSpacing:0,
-                    display:"flex",alignItems:"center",gap:5,
+                  style={{height:28,padding:"0 12px",borderRadius:20,
+                    display:"flex",alignItems:"center",gap:4,
                     background:showPicker?"rgba(0,229,204,0.12)":"rgba(0,229,204,0.05)",
                     border:`1px solid ${showPicker?"rgba(0,229,204,0.35)":"rgba(0,229,204,0.12)"}`,
                     color:showPicker?"#00e5cc":"rgba(0,229,204,0.45)"}}>
-                  <span style={{fontSize:14}}>📍</span>
-                  <span style={{fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>{showPicker?"CLOSE":"CHANGE"}</span>
+                  <span style={{fontSize:12}}>📍</span>
+                  <span style={{fontFamily:"'Orbitron',monospace",fontSize:7.5,letterSpacing:1}}>{showPicker?"CLOSE":"CHANGE"}</span>
                 </button>
               </div>
             </div>
@@ -3022,8 +3022,8 @@ export default function App() {
           backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
           border-bottom:1px solid rgba(255,255,255,0.05);
         }
-        .shared-brand { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; letter-spacing:2.5px; line-height:1; color:#fff; }
-        .shared-location { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:1px; color:rgba(255,255,255,0.75); line-height:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .shared-brand { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; letter-spacing:2.5px; line-height:1; color:#fff; flex-shrink:0; }
+        .shared-location { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:1px; color:rgba(255,255,255,0.75); line-height:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1; }
         .shared-sub { font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:1.5px; }
         .shared-badge { font-family:'JetBrains Mono',monospace; font-size:6.5px; letter-spacing:1px; border:1px solid; border-radius:999px; padding:2px 6px; }
         .shared-mode-pill { flex-shrink:0; }
@@ -3032,7 +3032,7 @@ export default function App() {
         @media (max-width: 520px) {
           .shared-hdr { padding:0 10px; }
           .shared-brand { font-size:11px; letter-spacing:2px; }
-          .shared-location { font-size:10px; max-width:100px; }
+          .shared-location { font-size:10px; }
           .shared-badge { display:none; }
         }
       `}</style>
