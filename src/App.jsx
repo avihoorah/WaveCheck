@@ -140,7 +140,7 @@ function ScoreArc({sc, color, size=88}) {
         strokeLinecap="round" transform="rotate(-90 44 44)"
         style={{transition:"stroke-dashoffset 1.2s cubic-bezier(0.34,1.56,0.64,1)",filter:`drop-shadow(0 0 6px ${color}90)`}}/>
       <text x="44" y="48" textAnchor="middle" fill="#fff"
-        fontSize="22" fontFamily="'Bebas Neue',sans-serif" letterSpacing="1">{sc}</text>
+        fontSize="22" fontFamily="'Orbitron',monospace" letterSpacing="1">{sc}</text>
     </svg>
   );
 }
@@ -259,7 +259,7 @@ function ForecastStrip({hourly, curHour, beach}) {
               {h<24?`${String(h).padStart(2,"0")}:00`:`+${h-24}h`}
             </div>
             <div style={{fontSize:15,marginBottom:3}}>{r.e}</div>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:r.c,letterSpacing:1}}>
+            <div style={{fontFamily:"'Orbitron',monospace",fontSize:15,color:r.c,letterSpacing:1}}>
               {(hourly.wave_height?.[h]??0).toFixed(1)}m
             </div>
             <div style={{fontSize:7,color:"rgba(255,255,255,0.2)",marginTop:1}}>
@@ -299,7 +299,7 @@ function WeekOutlook({hourly, beach}) {
               {lbl.toUpperCase()}
             </div>
             <div style={{fontSize:18,marginBottom:4}}>{r.e}</div>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:11,color:r.c,letterSpacing:1}}>
+            <div style={{fontFamily:"'Orbitron',monospace",fontSize:11,color:r.c,letterSpacing:1}}>
               {r.l.toUpperCase()}
             </div>
             <div style={{fontSize:8,color:"rgba(255,255,255,0.2)",marginTop:3}}>
@@ -326,9 +326,9 @@ function AllBeachesOverview({allScores, onSelect, currentId}) {
               border:`1px solid ${isActive?"rgba(0,191,255,0.3)":"rgba(255,255,255,0.05)"}`,
               borderRadius:10,padding:"10px 14px",textAlign:"left",width:"100%",cursor:"pointer",
               transition:"all 0.15s"}}>
-            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:r.c,width:24,textAlign:"center",flexShrink:0}}>{sc}</div>
+            <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,color:r.c,width:24,textAlign:"center",flexShrink:0}}>{sc}</div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:11,color:isActive?"#7dd3fc":"rgba(255,255,255,0.7)",fontFamily:"'Bebas Neue',sans-serif",letterSpacing:1,marginBottom:2}}>
+              <div style={{fontSize:11,color:isActive?"#7dd3fc":"rgba(255,255,255,0.7)",fontFamily:"'Orbitron',monospace",letterSpacing:1,marginBottom:2}}>
                 {beach.name}
               </div>
               <MiniBar value={sc} max={100} color={r.c}/>
@@ -737,10 +737,10 @@ function WaveCheckMode({ setMode }) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
         *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
         html { overflow-x:hidden; -webkit-text-size-adjust:100%; }
-        body { background:#060d17; overflow-x:hidden; width:100%; max-width:100vw; overscroll-behavior-x:none; }
+        body { background:#020910; overflow-x:hidden; width:100%; max-width:100vw; overscroll-behavior-x:none; }
         ::-webkit-scrollbar { width:2px; height:2px; }
         ::-webkit-scrollbar-thumb { background:rgba(255,255,255,0.1); border-radius:2px; }
         button { cursor:pointer; border:none; background:none; font-family:inherit; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
@@ -761,14 +761,20 @@ function WaveCheckMode({ setMode }) {
         .pulse { animation:pulse 2.5s ease-in-out infinite; }
         .shimmer { animation:shimmer 1.5s ease-in-out infinite; }
 
+        /* ── UNIFIED DESIGN SYSTEM — SURF MODE (accent: #00bfff) ── */
+        --accent: #00bfff;
+        --accent-dim: rgba(0,191,255,0.12);
+        --accent-border: rgba(0,191,255,0.25);
+        --accent-text: #7dd3fc;
+
         .shell {
           min-height:100vh;
           background:
-            radial-gradient(ellipse 130% 55% at 50% -5%, rgba(0,95,190,0.22) 0%, transparent 65%),
-            radial-gradient(ellipse 70% 40% at 85% 85%, rgba(0,25,75,0.15) 0%, transparent 55%),
-            linear-gradient(180deg, #060d17 0%, #07111e 55%, #060c18 100%);
+            radial-gradient(ellipse 120% 45% at 50% -8%, rgba(0,80,160,0.18) 0%, transparent 60%),
+            radial-gradient(ellipse 60% 35% at 90% 90%, rgba(0,20,60,0.12) 0%, transparent 55%),
+            linear-gradient(180deg, #020910 0%, #030d18 60%, #020910 100%);
           color:#fff;
-          font-family:'DM Mono',monospace;
+          font-family:'JetBrains Mono',monospace;
           padding-bottom:60px;
           overflow-x:hidden;
           width:100%;
@@ -778,18 +784,54 @@ function WaveCheckMode({ setMode }) {
           content:'';
           position:fixed; inset:0;
           background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-          opacity:0.022; pointer-events:none; z-index:0;
+          opacity:0.018; pointer-events:none; z-index:0;
         }
 
+        /* ── HEADER ── */
         .hdr {
           position:sticky; top:0; z-index:100;
           display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:10px 16px;
-          background:rgba(6,13,23,0.92);
-          backdrop-filter:blur(20px);
-          -webkit-backdrop-filter:blur(20px);
-          border-bottom:1px solid rgba(255,255,255,0.06);
+          padding:11px 16px;
+          background:rgba(2,9,16,0.88);
+          backdrop-filter:blur(24px);
+          -webkit-backdrop-filter:blur(24px);
+          border-bottom:1px solid rgba(0,191,255,0.08);
         }
+
+        /* ── MODE TOGGLE PILL ── */
+        .mode-pill {
+          display:flex; align-items:center;
+          background:rgba(255,255,255,0.03);
+          border:1px solid rgba(255,255,255,0.08);
+          border-radius:100px;
+          padding:3px;
+          gap:2px;
+          flex-shrink:0;
+        }
+        .mode-btn {
+          padding:5px 13px; border-radius:100px;
+          font-family:'Orbitron',monospace;
+          font-size:8px; letter-spacing:1.5px;
+          transition:all 0.22s cubic-bezier(0.4,0,0.2,1);
+          white-space:nowrap;
+        }
+        .mode-btn.surf-active {
+          background:rgba(0,191,255,0.15);
+          border:1px solid rgba(0,191,255,0.4);
+          color:#7dd3fc;
+          box-shadow:0 0 12px rgba(0,191,255,0.15);
+        }
+        .mode-btn.dive-active {
+          background:rgba(0,229,204,0.15);
+          border:1px solid rgba(0,229,204,0.4);
+          color:#00e5cc;
+          box-shadow:0 0 12px rgba(0,229,204,0.15);
+        }
+        .mode-btn.inactive {
+          color:rgba(255,255,255,0.22);
+          border:1px solid transparent;
+        }
+        .mode-btn.inactive:hover { color:rgba(255,255,255,0.5); }
 
         .page {
           width:100%; max-width:min(820px,100vw);
@@ -797,54 +839,53 @@ function WaveCheckMode({ setMode }) {
           overflow-x:hidden;
         }
 
-        /* Beach picker */
         .scroll-row {
           display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;
           -webkit-overflow-scrolling:touch; scrollbar-width:none;
         }
         .scroll-row::-webkit-scrollbar { display:none; }
 
-        /* Tabs */
+        /* ── TABS ── */
         .tabs {
           display:flex; gap:1px;
-          background:rgba(255,255,255,0.03);
-          border:1px solid rgba(255,255,255,0.06);
+          background:rgba(255,255,255,0.02);
+          border:1px solid rgba(0,191,255,0.08);
           border-radius:10px; padding:3px;
           margin-bottom:14px;
         }
         .tab-btn {
           flex:1; padding:6px 2px;
           border-radius:7px;
-          font-family:'Bebas Neue',sans-serif;
-          font-size:clamp(9px,2.5vw,12px); letter-spacing:0.5px;
-          color:rgba(255,255,255,0.28);
+          font-family:'Orbitron',monospace;
+          font-size:clamp(8px,2.2vw,10px); letter-spacing:0.5px;
+          color:rgba(255,255,255,0.25);
           transition:all 0.18s; text-align:center;
           white-space:nowrap; overflow:hidden; min-width:0;
         }
         .tab-btn.active {
-          background:linear-gradient(135deg, rgba(0,191,255,0.18) 0%, rgba(0,110,220,0.1) 100%);
+          background:rgba(0,191,255,0.1);
           color:#7dd3fc;
-          box-shadow:0 0 14px rgba(0,191,255,0.12), inset 0 1px 0 rgba(0,191,255,0.2);
-          border:1px solid rgba(0,191,255,0.2);
+          box-shadow:0 0 12px rgba(0,191,255,0.1), inset 0 1px 0 rgba(0,191,255,0.15);
+          border:1px solid rgba(0,191,255,0.22);
         }
-        .tab-btn:not(.active):hover { color:rgba(255,255,255,0.5); background:rgba(255,255,255,0.04); }
+        .tab-btn:not(.active):hover { color:rgba(255,255,255,0.45); background:rgba(255,255,255,0.03); }
 
-        /* Cards */
+        /* ── CARDS ── */
         .card {
-          background:rgba(255,255,255,0.025);
+          background:rgba(255,255,255,0.02);
           border:1px solid rgba(255,255,255,0.06);
           border-radius:12px;
           padding:14px;
           min-width:0; overflow:hidden;
         }
         .card-label {
-          font-size:8px; letter-spacing:3px;
-          color:rgba(255,255,255,0.25);
+          font-family:'Orbitron',monospace;
+          font-size:7.5px; letter-spacing:2.5px;
+          color:rgba(255,255,255,0.22);
           text-transform:uppercase;
           margin-bottom:10px;
         }
 
-        /* Hero decision */
         .hero {
           border-radius:16px; padding:18px;
           position:relative; overflow:hidden;
@@ -852,39 +893,35 @@ function WaveCheckMode({ setMode }) {
         }
         .hero-epic { animation:epicGlow 3s ease-in-out infinite; }
 
-        /* Stat mini grid */
+        /* ── STAT GRID ── */
         .stat-grid {
-          display:grid;
-          grid-template-columns:1fr 1fr;
-          gap:7px;
+          display:grid; grid-template-columns:1fr 1fr; gap:7px;
         }
         @media(min-width:480px) { .stat-grid { grid-template-columns:repeat(3,1fr); } }
         @media(min-width:700px) { .stat-grid { grid-template-columns:repeat(4,1fr); } }
 
         .stat-cell {
-          background:rgba(255,255,255,0.025);
-          border:1px solid rgba(255,255,255,0.055);
-          border-radius:10px;
-          padding:11px 12px;
-          min-width:0;
+          background:rgba(255,255,255,0.02);
+          border:1px solid rgba(255,255,255,0.05);
+          border-radius:10px; padding:11px 12px; min-width:0;
         }
         .stat-label {
-          font-size:7.5px; letter-spacing:2px;
-          color:rgba(255,255,255,0.25);
-          text-transform:uppercase;
-          margin-bottom:5px;
+          font-family:'Orbitron',monospace;
+          font-size:7px; letter-spacing:2px;
+          color:rgba(255,255,255,0.22);
+          text-transform:uppercase; margin-bottom:5px;
         }
         .stat-value {
-          font-family:'Bebas Neue',sans-serif;
-          font-size:20px; letter-spacing:1px;
+          font-family:'Orbitron',monospace;
+          font-size:18px; letter-spacing:0px;
           color:#fff; line-height:1.05;
         }
         .stat-sub {
-          font-size:8px; color:rgba(255,255,255,0.3);
+          font-family:'JetBrains Mono',monospace;
+          font-size:8px; color:rgba(255,255,255,0.28);
           margin-top:3px; line-height:1.3;
         }
 
-        /* Conditions row */
         .cond-row {
           display:flex; gap:7px;
           overflow-x:auto; -webkit-overflow-scrolling:touch;
@@ -893,19 +930,16 @@ function WaveCheckMode({ setMode }) {
         .cond-row::-webkit-scrollbar { display:none; }
         .cond-pill {
           flex-shrink:0;
-          background:rgba(255,255,255,0.03);
-          border:1px solid rgba(255,255,255,0.07);
-          border-radius:24px;
-          padding:6px 14px;
-          display:flex; align-items:center; gap:6px;
-          white-space:nowrap;
+          background:rgba(255,255,255,0.025);
+          border:1px solid rgba(255,255,255,0.06);
+          border-radius:24px; padding:6px 14px;
+          display:flex; align-items:center; gap:6px; white-space:nowrap;
         }
 
-        /* Ambient wave background */
         .wave-bg {
           position:fixed; bottom:0; left:0;
-          width:100%; height:160px;
-          pointer-events:none; z-index:0; opacity:0.045;
+          width:100%; height:140px;
+          pointer-events:none; z-index:0; opacity:0.04;
         }
         .wave1 { animation:waveBg1 18s linear infinite; }
         .wave2 { animation:waveBg2 13s linear infinite; }
@@ -930,36 +964,30 @@ function WaveCheckMode({ setMode }) {
         {/* ── HEADER ── */}
         <div className="hdr">
           <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
-            <div style={{width:34,height:34,borderRadius:9,background:"linear-gradient(135deg,#0070ff,#00bfff)",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0,
-              boxShadow:"0 0 20px rgba(0,191,255,0.3)"}}>🌊</div>
+            <div style={{width:32,height:32,borderRadius:8,
+              background:"linear-gradient(135deg,rgba(0,100,200,0.6),rgba(0,191,255,0.3))",
+              border:"1px solid rgba(0,191,255,0.25)",
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🌊</div>
             <div>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:5,lineHeight:1}}>WAVECHECK</div>
-              <div style={{fontSize:7,color:"rgba(255,255,255,0.22)",letterSpacing:3,marginTop:1}}>CAPE TOWN · LIVE</div>
+              <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>WAVECHECK</div>
+              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,191,255,0.4)",letterSpacing:2,marginTop:2}}>CAPE TOWN · SURF</div>
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-            {refreshing && <span className="shimmer" style={{fontSize:7,color:"#7dd3fc",letterSpacing:2}}>SYNCING</span>}            <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"rgba(255,255,255,0.55)",letterSpacing:1}}>
+            {refreshing && <span className="shimmer" style={{fontFamily:"'Orbitron',monospace",fontSize:6.5,color:"#7dd3fc",letterSpacing:2}}>SYNCING</span>}
+            <div style={{textAlign:"right"}}>
+              <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:"rgba(255,255,255,0.5)",letterSpacing:1}}>
                 {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
               </div>
-              {lastRef && <div style={{fontSize:6.5,color:"rgba(255,255,255,0.18)",letterSpacing:1}}>
+              {lastRef && <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,191,255,0.25)",letterSpacing:1}}>
                 ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}
               </div>}
             </div>
-          </div>
-            <div style={{display:"flex",gap:3,flexShrink:0}}>
-              <button onClick={()=>setMode("surf")} style={{padding:"4px 9px",borderRadius:20,
-                background:"rgba(0,191,255,0.14)",border:"1px solid rgba(0,191,255,0.45)",
-                color:"#7dd3fc",fontFamily:"'Bebas Neue',sans-serif",fontSize:9,letterSpacing:1.5}}>
-                🌊 SURF
-              </button>
-              <button onClick={()=>setMode("dive")} style={{padding:"4px 9px",borderRadius:20,
-                background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.1)",
-                color:"rgba(255,255,255,0.3)",fontFamily:"'Bebas Neue',sans-serif",fontSize:9,letterSpacing:1.5}}>
-                🤿 DIVE
-              </button>
+            <div className="mode-pill">
+              <button className="mode-btn surf-active" onClick={()=>setMode("surf")}>🌊 SURF</button>
+              <button className="mode-btn inactive" onClick={()=>setMode("dive")}>🤿 DIVE</button>
             </div>
+          </div>
         </div>
 
         <div className="page">
@@ -969,7 +997,7 @@ function WaveCheckMode({ setMode }) {
             {/* Compact current beach + change */}
             <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
               <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-                <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,letterSpacing:2,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:22,letterSpacing:2,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                   {beach.name}
                 </div>
                 <span style={{fontSize:7.5,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1.5,flexShrink:0,
@@ -1002,7 +1030,7 @@ function WaveCheckMode({ setMode }) {
                   {SIDES.map(s=>(
                     <button key={s} onClick={()=>setFilter(s)}
                       style={{flexShrink:0,padding:"4px 12px",borderRadius:100,fontSize:8,letterSpacing:2,
-                        fontFamily:"'DM Mono',monospace",transition:"all 0.15s",
+                        fontFamily:"'Orbitron',monospace",transition:"all 0.15s",
                         background:filter===s?"rgba(0,191,255,0.12)":"rgba(255,255,255,0.04)",
                         border:`1px solid ${filter===s?"rgba(0,191,255,0.35)":"rgba(255,255,255,0.07)"}`,
                         color:filter===s?"#7dd3fc":"rgba(255,255,255,0.35)"}}>
@@ -1014,7 +1042,7 @@ function WaveCheckMode({ setMode }) {
                   {beachList.map(b=>(
                     <button key={b.id} onClick={()=>{setBeach(b);setShowBeachPicker(false);}}
                       style={{flexShrink:0,padding:"6px 14px",borderRadius:100,
-                        fontFamily:"'Bebas Neue',sans-serif",fontSize:12,letterSpacing:2,whiteSpace:"nowrap",
+                        fontFamily:"'Orbitron',monospace",fontSize:12,letterSpacing:2,whiteSpace:"nowrap",
                         transition:"all 0.15s",
                         background:beach.id===b.id?"rgba(0,191,255,0.12)":"rgba(255,255,255,0.04)",
                         border:`1px solid ${beach.id===b.id?"rgba(0,191,255,0.4)":"rgba(255,255,255,0.07)"}`,
@@ -1084,11 +1112,11 @@ function WaveCheckMode({ setMode }) {
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <span style={{fontSize:18}}>🔥</span>
                           <div>
-                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:14,color:"#00ff87",letterSpacing:2}}>FIRING RIGHT NOW</div>
+                            <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,color:"#00ff87",letterSpacing:2}}>FIRING RIGHT NOW</div>
                             <div style={{fontSize:8,color:"rgba(255,255,255,0.35)",letterSpacing:1}}>Epic conditions at {beach.name}</div>
                           </div>
                         </div>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:26,color:"#00ff87",lineHeight:1}}>{data.sc}</div>
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:26,color:"#00ff87",lineHeight:1}}>{data.sc}</div>
                       </div>
                     )}
 
@@ -1122,7 +1150,7 @@ function WaveCheckMode({ setMode }) {
                       <div style={{display:"flex",alignItems:"center",gap:14}}>
                         <span style={{fontSize:40,flexShrink:0,lineHeight:1}}>{emoji}</span>
                         <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontFamily:"'Bebas Neue',sans-serif",
+                          <div style={{fontFamily:"'Orbitron',monospace",
                             fontSize:"clamp(24px,7vw,38px)",lineHeight:1,letterSpacing:2,
                             color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                             textShadow:`0 0 28px ${color}40`}}>
@@ -1159,7 +1187,7 @@ function WaveCheckMode({ setMode }) {
                       <div style={{flex:1,background:"rgba(0,191,255,0.04)",
                         border:"1px solid rgba(0,191,255,0.15)",borderRadius:11,padding:"12px 14px"}}>
                         <div className="card-label" style={{color:"rgba(0,191,255,0.5)"}}>⏱ BEST SESSION</div>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:20,color:"#7dd3fc",letterSpacing:2}}>
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:20,color:"#7dd3fc",letterSpacing:2}}>
                           {fmt(data.bst)} – {fmt(data.ben)}
                         </div>
                         <div style={{fontSize:8,color:"rgba(255,255,255,0.25)",marginTop:3}}>
@@ -1172,7 +1200,7 @@ function WaveCheckMode({ setMode }) {
                         <div style={{display:"flex",alignItems:"center",gap:8}}>
                           <WindArrow deg={data.wd} size={42} color={wst2.c}/>
                           <div style={{minWidth:0}}>
-                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:18,color:wst2.c,letterSpacing:1}}>
+                            <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,color:wst2.c,letterSpacing:1}}>
                               {wst2.s}
                             </div>
                             <div style={{fontSize:8,color:"rgba(255,255,255,0.3)",marginTop:1}}>{wc} · {data.ws.toFixed(0)}km/h</div>
@@ -1265,7 +1293,7 @@ function WaveCheckMode({ setMode }) {
                         <div style={{display:"flex",alignItems:"center",gap:10}}>
                           <span style={{fontSize:18}}>{e.type==="High"?"🌊":"🏖️"}</span>
                           <div>
-                            <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,
+                            <div style={{fontFamily:"'Orbitron',monospace",fontSize:15,
                               color:e.type==="High"?"#7dd3fc":"#fbbf24",letterSpacing:2}}>
                               {e.type} Tide
                             </div>
@@ -1274,7 +1302,7 @@ function WaveCheckMode({ setMode }) {
                             </div>
                           </div>
                         </div>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:"#fff"}}>
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:22,color:"#fff"}}>
                           {e.h.toFixed(2)}<span style={{fontSize:12,color:"rgba(255,255,255,0.4)"}}>m</span>
                         </div>
                       </div>
@@ -1308,7 +1336,7 @@ function WaveCheckMode({ setMode }) {
                     <div style={{background:`${rip.color}0d`,border:`1px solid ${rip.color}35`,borderRadius:12,padding:"14px"}}>
                       <div className="card-label">⚠️ RIP CURRENT RISK</div>
                       <div style={{display:"flex",alignItems:"center",gap:12}}>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:rip.color,letterSpacing:2,flexShrink:0}}>
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:28,color:rip.color,letterSpacing:2,flexShrink:0}}>
                           {rip.level}
                         </div>
                         <div style={{fontSize:10.5,color:"rgba(255,255,255,0.45)",lineHeight:1.5}}>{rip.tip}</div>
@@ -1318,7 +1346,7 @@ function WaveCheckMode({ setMode }) {
                     <div style={{background:`${crowd.color}0d`,border:`1px solid ${crowd.color}30`,borderRadius:12,padding:"14px"}}>
                       <div className="card-label">👥 CROWD FORECAST</div>
                       <div style={{display:"flex",alignItems:"center",gap:12}}>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:28,color:crowd.color,letterSpacing:2,flexShrink:0}}>
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:28,color:crowd.color,letterSpacing:2,flexShrink:0}}>
                           {crowd.level}
                         </div>
                         <div style={{fontSize:10.5,color:"rgba(255,255,255,0.45)",lineHeight:1.5}}>{crowd.tip}</div>
@@ -1373,7 +1401,7 @@ function WaveCheckMode({ setMode }) {
                     <div style={{display:"flex",alignItems:"center",gap:14}}>
                       <span style={{fontSize:44,flexShrink:0,lineHeight:1}}>{data.suit.icon}</span>
                       <div style={{minWidth:0}}>
-                        <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:22,color:data.suit.color,
+                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:22,color:data.suit.color,
                           letterSpacing:2,lineHeight:1.1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                           {data.suit.suit}
                         </div>
@@ -1392,7 +1420,7 @@ function WaveCheckMode({ setMode }) {
                       const[board,reason]=wh<0.4?["Longboard / Foamie","Flat — grab the log."]:wh<lo*.8?["Funboard / Longboard","Small — go for volume."]:wh<=hi?[beach.level==="Advanced"||beach.level==="Inter/Advanced"?"Shortboard / Step-up":"Fish / Mid-length",`In the ideal window for ${beach.name}.`]:wh<=hi*1.4?["Step-up","Bigger than ideal — go for length."]:["Gun","Big surf. Don't underboard."];
                       return (
                         <>
-                          <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:24,color:"#7dd3fc",letterSpacing:2,marginBottom:3}}>{board}</div>
+                          <div style={{fontFamily:"'Orbitron',monospace",fontSize:24,color:"#7dd3fc",letterSpacing:2,marginBottom:3}}>{board}</div>
                           <div style={{fontSize:11,color:"rgba(255,255,255,0.4)"}}>{reason}</div>
                         </>
                       );
@@ -1405,7 +1433,7 @@ function WaveCheckMode({ setMode }) {
                     borderRadius:12,padding:"14px"}}>
                     <div className="card-label">🔆 SUN PROTECTION</div>
                     <div style={{display:"flex",alignItems:"center",gap:12}}>
-                      <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:36,flexShrink:0,lineHeight:1,
+                      <div style={{fontFamily:"'Orbitron',monospace",fontSize:36,flexShrink:0,lineHeight:1,
                         color:data.uv>=8?"#f87171":data.uv>=5?"#fbbf24":"#4ade80"}}>
                         UV {data.uv?.toFixed(0)??"-"}
                       </div>
@@ -1579,10 +1607,10 @@ function DiveCheckMode({ setMode }) {
   return (
     <>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
         *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
         html { overflow-x:hidden; -webkit-text-size-adjust:100%; }
-        body { background:#020d0f; overflow-x:hidden; width:100%; overscroll-behavior-x:none; }
+        body { background:#020910; overflow-x:hidden; width:100%; max-width:100vw; overscroll-behavior-x:none; }
         ::-webkit-scrollbar { width:2px; height:2px; }
         ::-webkit-scrollbar-thumb { background:rgba(0,229,204,0.15); border-radius:2px; }
         button { cursor:pointer; border:none; background:none; font-family:inherit; -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
@@ -1593,16 +1621,11 @@ function DiveCheckMode({ setMode }) {
         @keyframes shimmer{ 0%,100%{opacity:0.4} 50%{opacity:1} }
         @keyframes bubbleUp { 0%{transform:translateY(0) scale(1);opacity:0.6} 100%{transform:translateY(-120px) scale(0.4);opacity:0} }
         @keyframes sonarPing { 0%{transform:scale(0.8);opacity:0.8} 100%{transform:scale(2.2);opacity:0} }
-        @keyframes waveBg1 { to{transform:translateX(-50%)} }
-        @keyframes waveBg2 { from{transform:translateX(-50%)} to{transform:translateX(0)} }
-        @keyframes waveBg3 { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
         @keyframes verdictPop { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
 
         .rise    { animation:rise 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
         .shimmer { animation:shimmer 1.6s ease-in-out infinite; }
-
-        /* Bubble particles */
-        .bubble { position:fixed; border-radius:50%; background:rgba(0,229,204,0.12); pointer-events:none; animation:bubbleUp 6s ease-in infinite; }
+        .bubble { position:fixed; border-radius:50%; background:rgba(0,229,204,0.1); pointer-events:none; animation:bubbleUp 7s ease-in infinite; }
 
         .shell {
           min-height:100vh;
@@ -1747,27 +1770,19 @@ function DiveCheckMode({ setMode }) {
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-            {refreshing && <span className="shimmer" style={{fontSize:7,color:"#00e5cc",letterSpacing:2}}>SYNCING</span>}
+            {refreshing && <span className="shimmer" style={{fontFamily:"'Orbitron',monospace",fontSize:6.5,color:"#00e5cc",letterSpacing:2}}>SYNCING</span>}
             <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,color:"rgba(0,229,204,0.5)",letterSpacing:1}}>
+              <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:"rgba(255,255,255,0.5)",letterSpacing:1}}>
                 {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
               </div>
-              {lastRef && <div style={{fontSize:6.5,color:"rgba(0,229,204,0.2)",letterSpacing:1}}>
+              {lastRef && <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,229,204,0.25)",letterSpacing:1}}>
                 ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}
               </div>}
             </div>
           </div>
-            <div style={{display:"flex",gap:3,flexShrink:0}}>
-              <button onClick={()=>setMode("surf")} style={{padding:"4px 9px",borderRadius:20,
-                background:"rgba(0,229,204,0.03)",border:"1px solid rgba(0,229,204,0.12)",
-                color:"rgba(0,229,204,0.3)",fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>
-                🌊 SURF
-              </button>
-              <button onClick={()=>setMode("dive")} style={{padding:"4px 9px",borderRadius:20,
-                background:"rgba(0,229,204,0.12)",border:"1px solid rgba(0,229,204,0.45)",
-                color:"#00e5cc",fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>
-                🤿 DIVE
-              </button>
+            <div className="mode-pill">
+              <button className="mode-btn inactive" onClick={()=>setMode("surf")}>🌊 SURF</button>
+              <button className="mode-btn dive-active" onClick={()=>setMode("dive")}>🤿 DIVE</button>
             </div>
         </div>
 
