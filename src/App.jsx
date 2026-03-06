@@ -18,6 +18,163 @@ const D16 = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W",
 const deg2c = d => D16[Math.round(((d%360)+360)%360/22.5)%16];
 const MONTH_TEMP = [18,18,17,16,15,14,13,13,14,15,16,17];
 
+const STORAGE_KEYS = {
+  mode: "beachcheck:mode",
+  surfBeach: "beachcheck:surf:beach",
+  surfFavs: "beachcheck:surf:favs",
+  surfTab: "beachcheck:surf:tab",
+  surfFilter: "beachcheck:surf:filter",
+  surfPicker: "beachcheck:surf:picker",
+  surfDetail: "beachcheck:surf:detail",
+  surfScroll: "beachcheck:surf:scroll",
+  diveSite: "beachcheck:dive:site",
+  diveFavs: "beachcheck:dive:favs",
+  diveTab: "beachcheck:dive:tab",
+  diveFilter: "beachcheck:dive:filter",
+  divePicker: "beachcheck:dive:picker",
+  diveDetail: "beachcheck:dive:detail",
+  diveScroll: "beachcheck:dive:scroll",
+};
+
+function readStorage(key, fallback) {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw == null ? fallback : JSON.parse(raw);
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage(key, value) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+}
+
+function usePersistentState(key, initialValue) {
+  const [state, setState] = useState(() => readStorage(key, initialValue));
+  useEffect(() => { writeStorage(key, state); }, [key, state]);
+  return [state, setState];
+}
+
+function useScrollPersistence(key, deps = []) {
+  const restoredRef = useRef(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let frame = 0;
+    const save = () => writeStorage(key, window.scrollY || 0);
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(save);
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("beforeunload", save);
+    return () => {
+      cancelAnimationFrame(frame);
+      save();
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("beforeunload", save);
+    };
+  }, [key]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const restore = () => {
+      const y = readStorage(key, 0);
+      window.scrollTo({ top: Number.isFinite(y) ? y : 0, behavior: "auto" });
+    };
+    restore();
+    const raf1 = requestAnimationFrame(restore);
+    const raf2 = requestAnimationFrame(() => requestAnimationFrame(restore));
+    const timer = window.setTimeout(restore, 220);
+    restoredRef.current = true;
+    return () => {
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      clearTimeout(timer);
+    };
+  }, [key, ...deps]);
+
+  return restoredRef;
+}
+
+function SharedHeader({ mode, setMode, refreshing, lastRef, now }) {
+  const isSurf = mode === "surf";
+  const accent = isSurf ? "#00bfff" : "#00e5cc";
+  const accentSoft = isSurf ? "rgba(0,191,255,0.4)" : "rgba(0,229,204,0.4)";
+  const boxBg = isSurf
+    ? "linear-gradient(135deg,rgba(0,100,200,0.6),rgba(0,191,255,0.3))"
+    : "linear-gradient(135deg,rgba(0,60,55,0.6),rgba(0,229,204,0.25))";
+  const boxBorder = isSurf ? "1px solid rgba(0,191,255,0.25)" : "1px solid rgba(0,229,204,0.22)";
+  const minutesAgo = lastRef ? Math.floor((now - lastRef) / 60000) : null;
+  const statusText = refreshing ? "· SYNCING" : lastRef ? `· ↻ ${minutesAgo < 1 ? "just now" : `${minutesAgo}m ago`}` : "";
+
+  return (
+    <div style={{
+      position: "sticky",
+      top: 0,
+      zIndex: 120,
+      height: 68,
+      padding: "0 16px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+      background: "rgba(2,9,16,0.94)",
+      backdropFilter: "blur(24px)",
+      WebkitBackdropFilter: "blur(24px)",
+      borderBottom: `1px solid ${isSurf ? "rgba(0,191,255,0.1)" : "rgba(0,229,204,0.1)"}`,
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, minWidth: 0, flex: 1 }}>
+        <div style={{
+          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+          display: "flex", alignItems: "center", justifyContent: "center", fontSize: 16,
+          background: boxBg, border: boxBorder
+        }}>
+          {isSurf ? "🌊" : "🤿"}
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <div style={{ fontFamily: "'Orbitron',monospace", fontSize: 14, fontWeight: 700, letterSpacing: 3, lineHeight: 1, color: "#fff" }}>
+            {isSurf ? "WAVECHECK" : "DIVECHECK"}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 2, minHeight: 10 }}>
+            <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 6.5, color: accentSoft, letterSpacing: 2 }}>CAPE TOWN</span>
+            {statusText ? (
+              <span className={refreshing ? "shimmer" : ""} style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 6.5, color: refreshing ? accent : "rgba(255,255,255,0.15)", letterSpacing: 1 }}>
+                {statusText}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+      <div className="mode-pill">
+        <button className={`mode-btn ${isSurf ? "surf-active" : "inactive"}`} onClick={() => setMode("surf")}>🌊 SURF</button>
+        <button className={`mode-btn ${!isSurf ? "dive-active" : "inactive"}`} onClick={() => setMode("dive")}>🤿 DIVE</button>
+      </div>
+    </div>
+  );
+}
+
+function SkeletonLoader({ mode = "surf" }) {
+  const glow = mode === "surf" ? "rgba(0,191,255,0.08)" : "rgba(0,229,204,0.08)";
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 9, padding: "4px 0" }}>
+      <div className="sk sk-hero" style={{ background: glow }} />
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+        <div className="sk sk-card" />
+        <div className="sk sk-card" />
+      </div>
+      <div className="sk" style={{ height: 80, borderRadius: 12 }} />
+      <div style={{ display: "flex", gap: 6 }}>
+        {[1, 2, 3].map((i) => <div key={i} className="sk" style={{ flex: 1, height: 28, borderRadius: 20 }} />)}
+      </div>
+    </div>
+  );
+}
+
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // SURF MODE HELPERS
@@ -637,22 +794,24 @@ function DForecastStrip({ hourly, curHour }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // WaveCheckMode
 // ═══════════════════════════════════════════════════════════════════════════════
-function WaveCheckMode({ setMode }) {
-  const [beach, setBeach] = useState(BEACHES[0]);
-  const [favs, setFavs] = useState(["muizenberg","bigbay","llandudno"]);
+function WaveCheckMode({ setHeaderMeta }) {
+  const [beachId, setBeachId] = usePersistentState(STORAGE_KEYS.surfBeach, BEACHES[0].id);
+  const beach = BEACHES.find(b => b.id === beachId) ?? BEACHES[0];
+  const setBeach = next => setBeachId(typeof next === "string" ? next : next.id);
+  const [favs, setFavs] = usePersistentState(STORAGE_KEYS.surfFavs, ["muizenberg","bigbay","llandudno"]);
   const [data, setData] = useState(null);
   const [hourly, setHourly] = useState(null);
   const [liveSst, setLiveSst] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [err, setErr] = useState(null);
-  const [tab, setTab] = useState("now");
-  const [filter, setFilter] = useState("All");
+  const [tab, setTab] = usePersistentState(STORAGE_KEYS.surfTab, "now");
+  const [filter, setFilter] = usePersistentState(STORAGE_KEYS.surfFilter, "All");
   const [lastRef, setLastRef] = useState(null);
   const [now, setNow] = useState(new Date());
-  const [showBeachPicker, setShowBeachPicker] = useState(false);
+  const [showBeachPicker, setShowBeachPicker] = usePersistentState(STORAGE_KEYS.surfPicker, false);
   const [allScores, setAllScores] = useState([]);
-  const [detailExpanded, setDetailExpanded] = useState(false);
+  const [detailExpanded, setDetailExpanded] = usePersistentState(STORAGE_KEYS.surfDetail, false);
   const hr = now.getHours();
 
   const fetchData = useCallback(async(b, silent=false)=>{
@@ -746,6 +905,11 @@ function WaveCheckMode({ setMode }) {
     document.body.style.width='100%';
   },[]);
 
+  useScrollPersistence(STORAGE_KEYS.surfScroll, [loading, tab, beach.id, showBeachPicker, detailExpanded]);
+  useEffect(() => {
+    setHeaderMeta({ refreshing, lastRef, now });
+  }, [refreshing, lastRef, now, setHeaderMeta]);
+
   const wc = data ? deg2c(data.wd) : "—";
   const wvc = data ? deg2c(data.waveDir) : "—";
   const wst = data ? windState(beach, wc) : null;
@@ -756,6 +920,7 @@ function WaveCheckMode({ setMode }) {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+        :root { --page-pad-x:14px; --page-pad-top:16px; --page-pad-bottom:calc(90px + env(safe-area-inset-bottom, 0px)); --section-gap:12px; --selector-row-min-h:34px; }
         *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
         html { overflow-x:hidden; -webkit-text-size-adjust:100%; }
         body { background:#020910; overflow-x:hidden; width:100%; max-width:100vw; overscroll-behavior-x:none; }
@@ -779,19 +944,9 @@ function WaveCheckMode({ setMode }) {
 
         /* ── SKELETON ── */
         @keyframes skeletonPulse { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
-        @keyframes shimmerMove { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .sk {
-          background:linear-gradient(90deg,
-            rgba(255,255,255,0.02) 25%,
-            rgba(255,255,255,0.08) 50%,
-            rgba(255,255,255,0.02) 75%);
-          background-size:200% 100%;
-          border-radius:12px;
-          animation:shimmerMove 1.5s linear infinite;
-          border:1px solid rgba(255,255,255,0.03);
-        }
+        .sk { background:rgba(255,255,255,0.04); border-radius:8px; animation:skeletonPulse 1.6s ease-in-out infinite; }
         .sk-line { height:10px; border-radius:4px; }
-        .sk-hero { height:160px; border-radius:16px; }
+        .sk-hero { height:140px; border-radius:16px; }
         .sk-card { height:80px; border-radius:12px; }
         .pulse { animation:pulse 2.5s ease-in-out infinite; }
         .shimmer { animation:shimmer 1.5s ease-in-out infinite; }
@@ -825,10 +980,9 @@ function WaveCheckMode({ setMode }) {
         /* ── HEADER ── */
         .hdr {
           position:sticky; top:0; z-index:100;
-          height:68px;
           display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:0 16px;
-          background:rgba(2,9,16,0.9);
+          padding:11px 16px;
+          background:rgba(2,9,16,0.88);
           backdrop-filter:blur(24px);
           -webkit-backdrop-filter:blur(24px);
           border-bottom:1px solid rgba(0,191,255,0.08);
@@ -871,7 +1025,7 @@ function WaveCheckMode({ setMode }) {
 
         .page {
           width:100%; max-width:min(820px,100vw);
-          margin:0 auto; padding:16px 14px 12px;
+          margin:0 auto; padding:var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom);
           overflow-x:hidden;
         }
 
@@ -887,7 +1041,7 @@ function WaveCheckMode({ setMode }) {
           background:rgba(255,255,255,0.02);
           border:1px solid rgba(0,191,255,0.08);
           border-radius:10px; padding:3px;
-          margin-bottom:14px;
+          margin-bottom:var(--section-gap);
         }
         .tab-btn {
           flex:1; padding:6px 2px;
@@ -996,44 +1150,19 @@ function WaveCheckMode({ setMode }) {
       </svg>
 
       <div className="shell" style={{position:"relative",zIndex:1}}>
-
-        {/* ── HEADER ── */}
-        <div className="hdr">
-          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}}>
-            <div style={{width:32,height:32,borderRadius:8,
-              background:"linear-gradient(135deg,rgba(0,100,200,0.6),rgba(0,191,255,0.3))",
-              border:"1px solid rgba(0,191,255,0.25)",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🌊</div>
-            <div style={{minWidth:0}}>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>WAVECHECK</div>
-              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
-                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,191,255,0.4)",letterSpacing:2}}>CAPE TOWN</span>
-                {refreshing
-                  ? <span className="shimmer" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"#7dd3fc",letterSpacing:1}}>· SYNCING</span>
-                  : lastRef && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(255,255,255,0.15)",letterSpacing:1}}>· ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}</span>
-                }
-              </div>
-            </div>
-          </div>
-          <div className="mode-pill">
-            <button className="mode-btn surf-active" onClick={()=>setMode("surf")}>🌊 SURF</button>
-            <button className="mode-btn inactive" onClick={()=>setMode("dive")}>🤿 DIVE</button>
-          </div>
-        </div>
-
         <div className="page">
 
           {/* ── BEACH SELECTOR ── */}
           <div style={{marginBottom:14}}>
             {/* Compact current beach + change */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:34}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"var(--section-gap)",gap:8,minHeight:"var(--selector-row-min-h)"}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:"clamp(16px,5vw,18px)",letterSpacing:0.8,color:"#fff",lineHeight:1.05,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
                   {beach.name}
                 </div>
-                <span style={{fontSize:7,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1,flexShrink:0,
+                <span style={{fontSize:6.5,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1,flexShrink:0,
                   background:`${LVL_COLOR[beach.level]??'#888'}15`,border:`1px solid ${LVL_COLOR[beach.level]??'#888'}30`,
-                  borderRadius:20,padding:"2px 7px"}}>
+                  borderRadius:20,padding:"2px 6px"}}>
                   {beach.level.toUpperCase()}
                 </span>
                 {SHARK.includes(beach.id) && <span style={{fontSize:7,flexShrink:0}}>🦈</span>}
@@ -1088,17 +1217,7 @@ function WaveCheckMode({ setMode }) {
 
           {/* ── LOADING ── */}
           {loading && (
-            <div style={{display:"flex",flexDirection:"column",gap:9,padding:"4px 0"}}>
-              <div className="sk sk-hero"/>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-                <div className="sk sk-card"/>
-                <div className="sk sk-card"/>
-              </div>
-              <div className="sk" style={{height:44,borderRadius:10}}/>
-              <div style={{display:"flex",gap:6}}>
-                {[1,2,3].map(i=><div key={i} className="sk" style={{flex:1,height:28,borderRadius:20}}/>)}
-              </div>
-            </div>
+            <SkeletonLoader mode="surf" />
           )}
           {err && (
             <div style={{background:"rgba(248,113,113,0.07)",border:"1px solid rgba(248,113,113,0.2)",
@@ -1537,7 +1656,7 @@ function WaveCheckMode({ setMode }) {
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:5}}>
                   {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"🛰 Copernicus SST":"📅 Seasonal"),"TIDES: Harmonic","UV: Open-Meteo"].map(s=>(
                     <span key={s} style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"rgba(0,191,255,0.6)",background:"rgba(0,191,255,0.05)",
-                      border:"1px solid rgba(0,191,255,0.1)",borderRadius:4,padding:"2px 7px",letterSpacing:0.3}}>{s}</span>
+                      border:"1px solid rgba(0,191,255,0.1)",borderRadius:4,padding:"2px 6px",letterSpacing:0.3}}>{s}</span>
                   ))}
                 </div>
                 <div style={{fontSize:7,color:"rgba(255,255,255,0.1)",letterSpacing:1}}>
@@ -1556,7 +1675,7 @@ function WaveCheckMode({ setMode }) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // DiveCheckMode
 // ═══════════════════════════════════════════════════════════════════════════════
-function DiveCheckMode({ setMode }) {
+function DiveCheckMode({ setHeaderMeta }) {
   const [site, setSite]               = useState(SITES[0]);
   const [data, setData]               = useState(null);
   const [hourly, setHourly]           = useState(null);
@@ -1565,8 +1684,8 @@ function DiveCheckMode({ setMode }) {
   const [loading, setLoading]         = useState(false);
   const [refreshing, setRefreshing]   = useState(false);
   const [err, setErr]                 = useState(null);
-  const [tab, setTab]                 = useState("now");
-  const [filter, setFilter]           = useState("All");
+  const [tab, setTab]                 = usePersistentState(STORAGE_KEYS.diveTab, "now");
+  const [filter, setFilter]           = usePersistentState(STORAGE_KEYS.diveFilter, "All");
   const [showPicker, setShowPicker]   = useState(false);
   const [now, setNow]                 = useState(new Date());
   const [lastRef, setLastRef]         = useState(null);
@@ -1654,6 +1773,11 @@ function DiveCheckMode({ setMode }) {
     document.body.style.overflowX='hidden';
   },[]);
 
+  useScrollPersistence(STORAGE_KEYS.diveScroll, [loading, tab, site.id, showPicker, detailExpanded]);
+  useEffect(() => {
+    setHeaderMeta({ refreshing, lastRef, now });
+  }, [refreshing, lastRef, now, setHeaderMeta]);
+
   const verdict = data ? diveVerdict(data.wh, data.ws, data.sp, data.tl) : null;
   // Visibility: prefer Copernicus satellite KD490 data, fallback to inference model
   const vis = data
@@ -1667,6 +1791,7 @@ function DiveCheckMode({ setMode }) {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
+        :root { --page-pad-x:14px; --page-pad-top:16px; --page-pad-bottom:calc(90px + env(safe-area-inset-bottom, 0px)); --section-gap:12px; --selector-row-min-h:34px; }
         *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
         html { overflow-x:hidden; -webkit-text-size-adjust:100%; }
         body { background:#020910; overflow-x:hidden; width:100%; max-width:100vw; overscroll-behavior-x:none; }
@@ -1678,6 +1803,7 @@ function DiveCheckMode({ setMode }) {
         @keyframes rise   { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
         @keyframes spin   { to{transform:rotate(360deg)} }
         @keyframes shimmer{ 0%,100%{opacity:0.4} 50%{opacity:1} }
+        @keyframes modeSwap { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
         @keyframes bubbleUp { 0%{transform:translateY(0) scale(1);opacity:0.6} 100%{transform:translateY(-120px) scale(0.4);opacity:0} }
         @keyframes sonarPing { 0%{transform:scale(0.8);opacity:0.8} 100%{transform:scale(2.2);opacity:0} }
         @keyframes verdictPop { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
@@ -1685,17 +1811,7 @@ function DiveCheckMode({ setMode }) {
         .rise    { animation:rise 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
         @keyframes skeletonPulse { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
-        @keyframes shimmerMove { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
-        .sk {
-          background:linear-gradient(90deg,
-            rgba(0,229,204,0.04) 25%,
-            rgba(0,229,204,0.12) 50%,
-            rgba(0,229,204,0.04) 75%);
-          background-size:200% 100%;
-          border-radius:12px;
-          animation:shimmerMove 1.5s linear infinite;
-          border:1px solid rgba(0,229,204,0.05);
-        }
+        .sk { background:rgba(0,229,204,0.06); border-radius:8px; animation:skeletonPulse 1.6s ease-in-out infinite; }
         .sk-hero { height:180px; border-radius:16px; }
         .sk-card { height:80px; border-radius:12px; }
         .shimmer { animation:shimmer 1.6s ease-in-out infinite; }
@@ -1722,9 +1838,8 @@ function DiveCheckMode({ setMode }) {
 
         .hdr {
           position:sticky; top:0; z-index:100;
-          height:68px;
           display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:0 16px;
+          padding:10px 16px;
           background:rgba(2,13,15,0.94);
           backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
           border-bottom:1px solid rgba(0,229,204,0.1);
@@ -1754,7 +1869,7 @@ function DiveCheckMode({ setMode }) {
 
         .page {
           width:100%; max-width:min(820px,100vw);
-          margin:0 auto; padding:16px 14px 12px;
+          margin:0 auto; padding:var(--page-pad-top) var(--page-pad-x) var(--page-pad-bottom);
           overflow-x:hidden; position:relative; z-index:1;
         }
 
@@ -1766,7 +1881,7 @@ function DiveCheckMode({ setMode }) {
           background:rgba(0,229,204,0.04);
           border:1px solid rgba(0,229,204,0.1);
           border-radius:10px; padding:3px;
-          margin-bottom:14px;
+          margin-bottom:var(--section-gap);
         }
         .tab-btn {
           flex:1; padding:7px 0; border-radius:7px;
@@ -1853,48 +1968,23 @@ function DiveCheckMode({ setMode }) {
       </svg>
 
       <div className="shell" style={{position:"relative",zIndex:1}}>
-
-        {/* ── HEADER ── */}
-        <div className="hdr">
-          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}}>
-            <div style={{width:32,height:32,borderRadius:8,
-              background:"linear-gradient(135deg,rgba(0,60,55,0.6),rgba(0,229,204,0.25))",
-              border:"1px solid rgba(0,229,204,0.22)",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🤿</div>
-            <div style={{minWidth:0}}>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>DIVECHECK</div>
-              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
-                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,229,204,0.4)",letterSpacing:2}}>CAPE TOWN</span>
-                {refreshing
-                  ? <span className="shimmer" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"#00e5cc",letterSpacing:1}}>· SYNCING</span>
-                  : lastRef && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(255,255,255,0.15)",letterSpacing:1}}>· ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}</span>
-                }
-              </div>
-            </div>
-          </div>
-          <div className="mode-pill">
-            <button className="mode-btn inactive" onClick={()=>setMode("surf")}>🌊 SURF</button>
-            <button className="mode-btn dive-active" onClick={()=>setMode("dive")}>🤿 DIVE</button>
-          </div>
-        </div>
-
         <div className="page">
 
           {/* ── SITE SELECTOR ── */}
           <div style={{marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:34}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:"var(--section-gap)",gap:8,minHeight:"var(--selector-row-min-h)"}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:"clamp(15px,4.8vw,17px)",letterSpacing:0.8,color:"#fff",lineHeight:1.05,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
                   {site.name}
                 </div>
                 {MPA_SITES.includes(site.id) && (
                   <span style={{fontSize:7,color:"#00ff9d",background:"rgba(0,255,157,0.08)",
-                    border:"1px solid rgba(0,255,157,0.25)",borderRadius:20,padding:"2px 7px",
+                    border:"1px solid rgba(0,255,157,0.25)",borderRadius:20,padding:"2px 6px",
                     letterSpacing:1.5,flexShrink:0}}>MPA</span>
                 )}
                 {site.entryType.includes("Boat") && (
                   <span style={{fontSize:7,color:"#ffb300",background:"rgba(255,179,0,0.08)",
-                    border:"1px solid rgba(255,179,0,0.2)",borderRadius:20,padding:"2px 7px",
+                    border:"1px solid rgba(255,179,0,0.2)",borderRadius:20,padding:"2px 6px",
                     letterSpacing:1,flexShrink:0}}>⛵</span>
                 )}
               </div>
@@ -2477,8 +2567,23 @@ function DiveCheckMode({ setMode }) {
 // ROOT APP
 // ═══════════════════════════════════════════════════════════════════════════════
 export default function App() {
-  const [mode, setMode] = useState("surf");
-  return mode === "surf"
-    ? <WaveCheckMode setMode={setMode} />
-    : <DiveCheckMode setMode={setMode} />;
+  const [mode, setMode] = usePersistentState(STORAGE_KEYS.mode, "surf");
+  const [headerMeta, setHeaderMeta] = useState({ refreshing: false, lastRef: null, now: new Date() });
+
+  return (
+    <>
+      <SharedHeader
+        mode={mode}
+        setMode={setMode}
+        refreshing={headerMeta.refreshing}
+        lastRef={headerMeta.lastRef}
+        now={headerMeta.now}
+      />
+      <div key={mode} style={{ animation: "modeSwap 160ms ease", minHeight: "calc(100vh - 68px)" }}>
+        {mode === "surf"
+          ? <WaveCheckMode setHeaderMeta={setHeaderMeta} />
+          : <DiveCheckMode setHeaderMeta={setHeaderMeta} />}
+      </div>
+    </>
+  );
 }
