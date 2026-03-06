@@ -1,39 +1,26 @@
 @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  color-scheme: dark;
-  --app-bg: #020910;
-  --app-bg-2: #030d18;
-  --page-pad-x: 14px;
-  --page-pad-top: 16px;
-  --page-pad-bottom: calc(90px + env(safe-area-inset-bottom, 0px));
-  --section-gap: 12px;
-  --selector-row-min-h: 34px;
-}
-
-* , *::before, *::after {
-  box-sizing: border-box;
+  --app-max: min(820px, 100vw);
+  --shared-header-h: 68px;
+  --page-top: 16px;
+  --page-bottom: 18px;
+  --section-gap: 14px;
 }
 
 html {
-  width: 100%;
-  min-height: 100%;
   overflow-x: hidden;
   -webkit-text-size-adjust: 100%;
-  background: var(--app-bg);
+  background: #020910;
 }
 
 body {
   margin: 0;
-  width: 100%;
-  min-height: 100vh;
-  max-width: 100vw;
-  overflow-x: hidden;
-  background:
-    radial-gradient(ellipse 120% 45% at 50% -8%, rgba(0, 80, 160, 0.16) 0%, transparent 60%),
-    linear-gradient(180deg, var(--app-bg) 0%, var(--app-bg-2) 60%, var(--app-bg) 100%);
+  min-width: 320px;
+  background: #020910;
   color: #fff;
   font-family: 'JetBrains Mono', monospace;
+  overflow-x: hidden;
   overscroll-behavior-x: none;
 }
 
@@ -45,6 +32,10 @@ body {
   text-align: left;
 }
 
+* {
+  box-sizing: border-box;
+}
+
 button,
 input,
 select,
@@ -52,80 +43,14 @@ textarea {
   font: inherit;
 }
 
-button {
-  -webkit-tap-highlight-color: transparent;
-}
-
 img,
 svg,
-canvas,
-video {
-  display: block;
+canvas {
   max-width: 100%;
 }
 
-@keyframes modeSwap {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.mode-pill {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  flex-shrink: 0;
-  padding: 3px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-}
-
-.mode-btn {
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 4px 10px;
-  background: transparent;
-  color: rgba(255, 255, 255, 0.22);
-  font-family: 'Orbitron', monospace;
-  font-size: 7.5px;
-  letter-spacing: 1px;
-  white-space: nowrap;
-  transition: all 160ms ease;
-  cursor: pointer;
-}
-
-.mode-btn.surf-active {
-  background: rgba(0, 191, 255, 0.14);
-  border-color: rgba(0, 191, 255, 0.38);
-  color: #7dd3fc;
-}
-
-.mode-btn.dive-active {
-  background: rgba(0, 229, 204, 0.14);
-  border-color: rgba(0, 229, 204, 0.38);
-  color: #00e5cc;
-}
-
-.mode-btn.inactive:hover {
-  color: rgba(255, 255, 255, 0.5);
-}
-
-.shimmer {
-  animation: shimmerText 1.3s ease-in-out infinite;
-}
-
-@keyframes shimmerText {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
+@supports (padding: max(0px)) {
+  body {
+    padding-bottom: env(safe-area-inset-bottom);
   }
 }
