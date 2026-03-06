@@ -827,33 +827,33 @@ function WaveCheckMode({ setMode }) {
         .mode-pill {
           display:flex; align-items:center;
           background:rgba(255,255,255,0.03);
-          border:1px solid rgba(255,255,255,0.08);
+          border:1px solid rgba(255,255,255,0.07);
           border-radius:100px;
           padding:3px;
           gap:2px;
           flex-shrink:0;
         }
         .mode-btn {
-          padding:5px 13px; border-radius:100px;
+          padding:4px 10px; border-radius:100px;
           font-family:'Orbitron',monospace;
-          font-size:8px; letter-spacing:1.5px;
+          font-size:7.5px; letter-spacing:1px;
           transition:all 0.22s cubic-bezier(0.4,0,0.2,1);
           white-space:nowrap;
         }
         .mode-btn.surf-active {
-          background:rgba(0,191,255,0.15);
-          border:1px solid rgba(0,191,255,0.4);
+          background:rgba(0,191,255,0.14);
+          border:1px solid rgba(0,191,255,0.38);
           color:#7dd3fc;
-          box-shadow:0 0 12px rgba(0,191,255,0.15);
+          box-shadow:0 0 10px rgba(0,191,255,0.12);
         }
         .mode-btn.dive-active {
-          background:rgba(0,229,204,0.15);
-          border:1px solid rgba(0,229,204,0.4);
+          background:rgba(0,229,204,0.14);
+          border:1px solid rgba(0,229,204,0.38);
           color:#00e5cc;
-          box-shadow:0 0 12px rgba(0,229,204,0.15);
+          box-shadow:0 0 10px rgba(0,229,204,0.12);
         }
         .mode-btn.inactive {
-          color:rgba(255,255,255,0.22);
+          color:rgba(255,255,255,0.2);
           border:1px solid transparent;
         }
         .mode-btn.inactive:hover { color:rgba(255,255,255,0.5); }
@@ -988,30 +988,25 @@ function WaveCheckMode({ setMode }) {
 
         {/* ── HEADER ── */}
         <div className="hdr">
-          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}}>
             <div style={{width:32,height:32,borderRadius:8,
               background:"linear-gradient(135deg,rgba(0,100,200,0.6),rgba(0,191,255,0.3))",
               border:"1px solid rgba(0,191,255,0.25)",
               display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🌊</div>
-            <div>
+            <div style={{minWidth:0}}>
               <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>WAVECHECK</div>
-              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,191,255,0.4)",letterSpacing:2,marginTop:2}}>CAPE TOWN · SURF</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,191,255,0.4)",letterSpacing:2}}>CAPE TOWN</span>
+                {refreshing
+                  ? <span className="shimmer" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"#7dd3fc",letterSpacing:1}}>· SYNCING</span>
+                  : lastRef && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(255,255,255,0.15)",letterSpacing:1}}>· ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}</span>
+                }
+              </div>
             </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-            {refreshing && <span className="shimmer" style={{fontFamily:"'Orbitron',monospace",fontSize:6.5,color:"#7dd3fc",letterSpacing:2}}>SYNCING</span>}
-            <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:"rgba(255,255,255,0.5)",letterSpacing:1}}>
-                {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
-              </div>
-              {lastRef && <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,191,255,0.25)",letterSpacing:1}}>
-                ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}
-              </div>}
-            </div>
-            <div className="mode-pill">
-              <button className="mode-btn surf-active" onClick={()=>setMode("surf")}>🌊 SURF</button>
-              <button className="mode-btn inactive" onClick={()=>setMode("dive")}>🤿 DIVE</button>
-            </div>
+          <div className="mode-pill">
+            <button className="mode-btn surf-active" onClick={()=>setMode("surf")}>🌊 SURF</button>
+            <button className="mode-btn inactive" onClick={()=>setMode("dive")}>🤿 DIVE</button>
           </div>
         </div>
 
@@ -1706,6 +1701,28 @@ function DiveCheckMode({ setMode }) {
           border-bottom:1px solid rgba(0,229,204,0.1);
         }
 
+        .mode-pill {
+          display:flex; align-items:center;
+          background:rgba(255,255,255,0.03);
+          border:1px solid rgba(255,255,255,0.07);
+          border-radius:100px; padding:3px; gap:2px; flex-shrink:0;
+        }
+        .mode-btn {
+          padding:5px 12px; border-radius:100px;
+          font-family:'Orbitron',monospace;
+          font-size:7.5px; letter-spacing:1px;
+          transition:all 0.22s cubic-bezier(0.4,0,0.2,1); white-space:nowrap;
+          border:1px solid transparent;
+        }
+        .mode-btn.surf-active {
+          background:rgba(0,191,255,0.13); border-color:rgba(0,191,255,0.35); color:#7dd3fc;
+        }
+        .mode-btn.dive-active {
+          background:rgba(0,229,204,0.13); border-color:rgba(0,229,204,0.35); color:#00e5cc;
+        }
+        .mode-btn.inactive { color:rgba(255,255,255,0.2); }
+        .mode-btn.inactive:hover { color:rgba(255,255,255,0.45); }
+
         .page {
           width:100%; max-width:min(820px,100vw);
           margin:0 auto; padding:12px 14px;
@@ -1817,23 +1834,18 @@ function DiveCheckMode({ setMode }) {
               display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🤿</div>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>DIVECHECK</div>
-              <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,229,204,0.4)",letterSpacing:2,marginTop:2}}>CAPE TOWN · DIVE</div>
+              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,229,204,0.4)",letterSpacing:2}}>CAPE TOWN</span>
+                {refreshing
+                  ? <span className="shimmer" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"#00e5cc",letterSpacing:1}}>· SYNCING</span>
+                  : lastRef && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(255,255,255,0.15)",letterSpacing:1}}>· ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}</span>
+                }
+              </div>
             </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
-            {refreshing && <span className="shimmer" style={{fontFamily:"'Orbitron',monospace",fontSize:6.5,color:"#00e5cc",letterSpacing:2}}>SYNCING</span>}
-            <div style={{textAlign:"right"}}>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:"rgba(255,255,255,0.5)",letterSpacing:1}}>
-                {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
-              </div>
-              {lastRef && <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(0,229,204,0.25)",letterSpacing:1}}>
-                ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}
-              </div>}
-            </div>
-            <div className="mode-pill">
-              <button className="mode-btn inactive" onClick={()=>setMode("surf")}>🌊 SURF</button>
-              <button className="mode-btn dive-active" onClick={()=>setMode("dive")}>🤿 DIVE</button>
-            </div>
+          <div className="mode-pill">
+            <button className="mode-btn inactive" onClick={()=>setMode("surf")}>🌊 SURF</button>
+            <button className="mode-btn dive-active" onClick={()=>setMode("dive")}>🤿 DIVE</button>
           </div>
         </div>
 
