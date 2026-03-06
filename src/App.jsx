@@ -317,7 +317,7 @@ function AllBeachesOverview({allScores, onSelect, currentId}) {
   const sorted = [...allScores].sort((a,b)=>b.sc-a.sc);
   return (
     <div style={{display:"flex",flexDirection:"column",gap:6}}>
-      {sorted.map(({beach,sc})=>{
+      {sorted.map(({ beach, sc, wh }) => {
         const r = rating(sc);
         const isActive = beach.id === currentId;
         return (
