@@ -25,59 +25,39 @@ function useStoredState(key, initialValue) {
   return [value, setValue];
 }
 
-const haptic = (ms=8) => { try { navigator.vibrate?.(ms); } catch {} };
-
-function SharedHeader({ mode, setMode, meta, onRefresh, onSettings, isRefreshing }) {
+function SharedHeader({ mode, setMode, meta }) {
   const isSurf = mode === "surf";
   const accent = isSurf ? "#00bfff" : "#00e5cc";
   const bg = isSurf
     ? "linear-gradient(135deg,rgba(0,100,200,0.6),rgba(0,191,255,0.3))"
     : "linear-gradient(135deg,rgba(0,60,55,0.6),rgba(0,229,204,0.25))";
-  const border = isSurf ? "1px solid rgba(0,191,255,0.25)" : "1px solid rgba(0,229,204,0.22)";
-  const minsAgo = meta?.lastRef ? Math.floor((Date.now()-new Date(meta.lastRef).getTime())/60000) : null;
+  const border = isSurf
+    ? "1px solid rgba(0,191,255,0.25)"
+    : "1px solid rgba(0,229,204,0.22)";
 
   return (
     <div className="shared-hdr">
-      {/* Left: brand + location */}
-      <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1,overflow:"hidden"}}>
-        <div style={{width:36,height:36,borderRadius:10,background:bg,border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}}>
+        <div style={{width:32,height:32,borderRadius:8,background:bg,border,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>
           {isSurf ? "🌊" : "🤿"}
         </div>
-        <div style={{minWidth:0,overflow:"hidden"}}>
-          <div style={{display:"flex",alignItems:"center",gap:7,minWidth:0}}>
+        <div style={{minWidth:0,flex:1}}>
+          <div style={{display:"flex",alignItems:"baseline",gap:8,minWidth:0,flexWrap:"wrap"}}>
             <div className="shared-brand">{isSurf ? "WAVECHECK" : "DIVECHECK"}</div>
-            {meta?.title && (
-              <div className="shared-location" style={{color:accent}}>
-                {meta.title}
-              </div>
-            )}
+            {meta?.title && <div className="shared-location">{meta.title}</div>}
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:5,marginTop:2,flexWrap:"nowrap",overflow:"hidden"}}>
-            <span className="shared-sub" style={{color:isSurf?"rgba(0,191,255,0.5)":"rgba(0,229,204,0.5)",flexShrink:0}}>
-              CAPE TOWN
-            </span>
-            {meta?.badges?.slice(0,1).map((badge,i)=>(
-              <span key={i} className="shared-badge" style={{borderColor:`${accent}30`,color:accent,background:`${accent}10`,flexShrink:0}}>{badge}</span>
-            ))}
-            {meta?.refreshing||isRefreshing
-              ? <span className="shimmer" style={{fontSize:9,color:accent,letterSpacing:1,flexShrink:0}}>· SYNCING</span>
-              : minsAgo!==null && <span style={{fontSize:9,color:"rgba(255,255,255,0.18)",flexShrink:0}}>· {minsAgo<1?"just now":minsAgo+"m ago"}</span>
-            }
+          <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2,minWidth:0,flexWrap:"wrap"}}>
+            <span className="shared-sub" style={{color:isSurf ? "rgba(0,191,255,0.45)" : "rgba(0,229,204,0.45)"}}>CAPE TOWN · {isSurf ? "SURF" : "DIVE"}</span>
+            {meta?.badges?.map((badge, i)=>(<span key={i} className="shared-badge" style={{borderColor:`${accent}33`,color:accent,background:`${accent}12`}}>{badge}</span>))}
+            {meta?.refreshing
+              ? <span className="shimmer" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:accent,letterSpacing:1}}>· SYNCING</span>
+              : meta?.lastRef && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:6.5,color:"rgba(255,255,255,0.2)",letterSpacing:1}}>· ↻ {Math.floor((Date.now()-new Date(meta.lastRef).getTime())/60000)<1?"just now":Math.floor((Date.now()-new Date(meta.lastRef).getTime())/60000)+"m ago"}</span>}
           </div>
         </div>
       </div>
-      {/* Right: refresh + settings + mode toggle */}
-      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-        <button className="hdr-icon-btn" onClick={()=>{haptic(6);onRefresh?.();}} title="Refresh">
-          <span style={{display:"inline-block",transition:"transform 0.3s"}} className={isRefreshing?"spin-anim":""}>↻</span>
-        </button>
-        <button className="hdr-icon-btn" onClick={()=>{haptic(6);onSettings?.();}} title="Settings">⚙</button>
-        <div className="mode-pill">
-          <button className={`mode-btn ${isSurf?'surf-active':'inactive'}`}
-            onClick={()=>{haptic(10);setMode("surf");}}>🌊 SURF</button>
-          <button className={`mode-btn ${!isSurf?'dive-active':'inactive'}`}
-            onClick={()=>{haptic(10);setMode("dive");}}>🤿 DIVE</button>
-        </div>
+      <div className="mode-pill shared-mode-pill">
+        <button className={`mode-btn ${isSurf ? 'surf-active' : 'inactive'}`} onClick={()=>setMode("surf")}>🌊 SURF</button>
+        <button className={`mode-btn ${!isSurf ? 'dive-active' : 'inactive'}`} onClick={()=>setMode("dive")}>🤿 DIVE</button>
       </div>
     </div>
   );
@@ -748,12 +728,6 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
   const [showScoreInfo, setShowScoreInfo] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [focusMode, setFocusMode] = useState(false);
-  const [sessionLog, setSessionLog] = useStoredState("bc_surf_sessions", []);
-  const [showLog, setShowLog] = useState(false);
-  const [logNote, setLogNote] = useState("");
-  const [condImproved, setCondImproved] = useStoredState("bc_surf_prevsc", null);
-  const swipeStartX = useRef(null);
   const hr = now.getHours();
 
   const fetchData = useCallback(async(b, silent=false)=>{
@@ -848,14 +822,6 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
   },[]);
 
   useEffect(()=>{
-    const onRefresh = () => handlePullRefresh();
-    const onSettings = () => setShowSettings(true);
-    window.addEventListener("bc_refresh", onRefresh);
-    window.addEventListener("bc_settings", onSettings);
-    return () => { window.removeEventListener("bc_refresh", onRefresh); window.removeEventListener("bc_settings", onSettings); };
-  },[]);
-
-  useEffect(()=>{
     safeWrite("bc_surf_beach", beach.id);
   },[beach]);
 
@@ -884,27 +850,6 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
   const fmtSpeed = v => units.speed==="kts" ? `${Math.round(v*0.540)}kts` : `${Math.round(v)}km/h`;
   const heightUnit = units.height==="ft" ? "ft" : "m";
   const speedUnit = units.speed==="kts" ? "kts" : "km/h";
-
-  const TAB_IDS = TABS.map(t=>t.id);
-  const handleSwipe = (dir) => {
-    const idx = TAB_IDS.indexOf(tab);
-    const next = dir==="left" ? TAB_IDS[Math.min(idx+1,TAB_IDS.length-1)] : TAB_IDS[Math.max(idx-1,0)];
-    if(next !== tab) { haptic(8); setTab(next); }
-  };
-
-  const logSession = () => {
-    if(!data) return;
-    const entry = {
-      id: Date.now(), beach: beach.name, score: data.sc,
-      wh: data.wh.toFixed(1), sp: data.sp.toFixed(0),
-      wind: `${deg2c(data.wd)} ${data.ws.toFixed(0)}km/h`,
-      ts: new Date().toLocaleString("en-ZA",{dateStyle:"short",timeStyle:"short"}),
-      note: logNote
-    };
-    setSessionLog(p=>[entry,...p.slice(0,29)]);
-    setLogNote(""); setShowLog(false);
-    haptic(15);
-  };
 
   // Pull-to-refresh
   const handlePullRefresh = async () => {
@@ -962,7 +907,7 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
             linear-gradient(180deg, #020910 0%, #030d18 60%, #020910 100%);
           color:#fff;
           font-family:'JetBrains Mono',monospace;
-          padding-bottom:60px;
+          padding-bottom:0;
           overflow-x:hidden;
           width:100%;
           max-width:100vw;
@@ -1022,23 +967,9 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
 
         .page {
           width:100%; max-width:min(820px,100vw);
-          margin:0 auto; padding:0 14px 32px;
+          margin:0 auto; padding:var(--page-top,12px) 14px 24px;
           overflow-x:hidden;
         }
-        /* Landscape 2-col layout */
-        @media (min-width:700px) and (orientation:landscape) {
-          .landscape-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-        }
-        /* Shared icon buttons (refresh, settings) */
-        .hdr-icon-btn {
-          width:44px; height:44px; border-radius:10px; display:flex; align-items:center;
-          justify-content:center; font-size:16px; color:rgba(255,255,255,0.4);
-          background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08);
-          transition:all 0.15s; flex-shrink:0;
-        }
-        .hdr-icon-btn:active { transform:scale(0.93); }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        .spin-anim { animation:spin 0.8s linear infinite; }
 
         .scroll-row {
           display:flex; gap:6px; overflow-x:auto; padding-bottom:2px;
@@ -1046,25 +977,33 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         }
         .scroll-row::-webkit-scrollbar { display:none; }
 
-        /* ── TOP TABS ── */
+        /* ── TABS — top tab bar ── */
         .tabs {
-          display:flex; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch;
-          scrollbar-width:none; padding:0 14px; margin-bottom:10px;
-          border-bottom:1px solid rgba(0,191,255,0.1);
-          background:rgba(2,9,16,0.6);
-          position:sticky; top:0; z-index:90;
+          display:flex !important;
+          gap:2px;
+          background:rgba(0,0,0,0.25);
+          border:1px solid rgba(0,191,255,0.1);
+          border-radius:12px; padding:4px;
+          margin-bottom:var(--section-gap,14px);
+          overflow-x:auto; scrollbar-width:none;
         }
         .tabs::-webkit-scrollbar { display:none; }
         .tab-btn {
-          flex-shrink:0; padding:11px 14px; font-family:'Orbitron',monospace;
-          font-size:9px; letter-spacing:1.5px; color:rgba(255,255,255,0.28);
-          border-bottom:2px solid transparent; transition:all 0.18s; white-space:nowrap;
+          flex:1; min-width:0; padding:8px 4px; border-radius:8px;
+          font-family:'Orbitron',monospace; font-size:8px; letter-spacing:0.8px;
+          color:rgba(0,191,255,0.35);
+          transition:all 0.18s; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
         }
-        .tab-btn.active { color:#7dd3fc; border-bottom-color:#00bfff; }
-        .tab-btn:active { transform:scale(0.95); }
+        .tab-btn.active {
+          background:rgba(0,191,255,0.12);
+          color:#7dd3fc;
+          box-shadow:0 0 12px rgba(0,191,255,0.1), inset 0 1px 0 rgba(0,191,255,0.15);
+          border:1px solid rgba(0,191,255,0.22);
+        }
+        .tab-btn:not(.active):hover { color:rgba(0,191,255,0.6); background:rgba(0,191,255,0.05); }
 
-        /* ── BOTTOM NAV — hide ── */
-        .bottom-nav { display:none; }
+        /* ── BOTTOM NAV — hidden ── */
+        .bottom-nav { display:none !important; }
 
         /* ── CARDS ── */
         .card {
@@ -1132,30 +1071,26 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           display:flex; align-items:center; gap:6px; white-space:nowrap;
         }
 
-        /* ── MODAL OVERLAY — anchored to top of viewport ── */
+        /* ── MODAL OVERLAY ── */
         .modal-overlay {
           position:fixed; inset:0; z-index:500;
           background:rgba(0,0,0,0.75);
           backdrop-filter:blur(8px);
-          display:flex; align-items:flex-start; justify-content:center;
-          padding:env(safe-area-inset-top,0) 0 0;
-          overflow-y:auto;
+          display:flex; align-items:center; justify-content:center;
+          padding:16px;
         }
         .modal-sheet {
-          width:100%; max-width:820px;
+          width:100%; max-width:500px;
+          max-height:calc(100dvh - 32px);
+          overflow-y:auto;
           background:#0a1628;
-          border:1px solid rgba(0,191,255,0.15);
-          border-top:none;
-          border-radius:0 0 20px 20px;
-          padding:16px 18px 32px;
-          animation:slideDown 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards;
-          max-height:92vh; overflow-y:auto;
+          border:1px solid rgba(0,191,255,0.2);
+          border-radius:20px;
+          padding:20px 18px 24px;
+          animation:modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards;
         }
-        @keyframes slideDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
-        .modal-handle {
-          width:36px; height:4px; background:rgba(255,255,255,0.15);
-          border-radius:2px; margin:0 auto 18px;
-        }
+        @keyframes modalPop { from{opacity:0;transform:scale(0.95)} to{opacity:1;transform:scale(1)} }
+        .modal-handle { display:none; }
 
         /* ── PULL REFRESH INDICATOR ── */
         @keyframes spinCw { to{transform:rotate(360deg)} }
@@ -1268,84 +1203,54 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         </div>
       )}
 
-      <div className="shell" style={{position:"relative",zIndex:1}}
-        onTouchStart={e=>{ swipeStartX.current = e.touches[0].clientX; }}
-        onTouchEnd={e=>{ if(swipeStartX.current===null) return; const dx=e.changedTouches[0].clientX-swipeStartX.current; if(Math.abs(dx)>50){handleSwipe(dx<0?"left":"right");} swipeStartX.current=null; }}>
+      <div className="shell" style={{position:"relative",zIndex:1}}>
 
-        {/* ── HEADER (hidden when SharedHeader is used) ── */}
+        {/* ── HEADER ── */}
         <div className="hdr" style={hideHeader ? {display:"none"} : undefined}>
           <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}}>
-            <div style={{width:36,height:36,borderRadius:10,
+            <div style={{width:32,height:32,borderRadius:8,
               background:"linear-gradient(135deg,rgba(0,100,200,0.6),rgba(0,191,255,0.3))",
               border:"1px solid rgba(0,191,255,0.25)",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🌊</div>
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🌊</div>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>WAVECHECK</div>
               <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
-                <span style={{fontSize:9,color:"rgba(0,191,255,0.5)",letterSpacing:2}}>CAPE TOWN</span>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"rgba(0,191,255,0.5)",letterSpacing:2}}>CAPE TOWN</span>
+                {(refreshing||isRefreshing)
+                  ? <span className="shimmer" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#7dd3fc",letterSpacing:1}}>· SYNCING</span>
+                  : lastRef && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"rgba(255,255,255,0.2)",letterSpacing:1}}>· ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}</span>
+                }
               </div>
             </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-            <button className="hdr-icon-btn" onClick={handlePullRefresh}>
-              <span className={isRefreshing?"spin-anim":""}>↻</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+            <button onClick={handlePullRefresh} title="Refresh"
+              style={{width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
+                background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
+                fontSize:14,color:"rgba(255,255,255,0.35)"}}>
+              <span className={isRefreshing?"refresh-spinning":""}>↻</span>
             </button>
-            <button className="hdr-icon-btn" onClick={()=>setShowSettings(true)}>⚙</button>
-          </div>
-        </div>
-
-        {/* ── TABS — TOP ── */}
-        <div className="tabs">
-          {TABS.map(t=>(
-            <button key={t.id} className={`tab-btn${tab===t.id?" active":""}`}
-              onClick={()=>{haptic(6);setTab(t.id);}}>
-              {t.icon} {t.l}
+            <button onClick={()=>setShowSettings(true)} title="Settings"
+              style={{width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
+                background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
+                fontSize:14,color:"rgba(255,255,255,0.35)"}}>
+              ⚙
             </button>
-          ))}
-        </div>
-
-        {/* ── AT-A-GLANCE STICKY BAR ── */}
-        {data && (
-          <div style={{
-            position:"sticky",top:hideHeader ? 44 : 88, zIndex:80,
-            background:"rgba(2,9,16,0.92)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
-            borderBottom:"1px solid rgba(0,191,255,0.07)",
-            padding:"7px 14px",display:"flex",alignItems:"center",gap:12,overflowX:"auto",
-            scrollbarWidth:"none"
-          }}>
-            <div style={{display:"flex",gap:10,alignItems:"center",flexShrink:0}}>
-              <span style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:rating(data.sc).c,letterSpacing:1}}>{data.sc}</span>
-              <span style={{fontSize:10,color:"rgba(255,255,255,0.3)"}}>/100</span>
+            <div className="mode-pill">
+              <button className="mode-btn surf-active" onClick={()=>setMode("surf")}>🌊 SURF</button>
+              <button className="mode-btn inactive" onClick={()=>setMode("dive")}>🤿 DIVE</button>
             </div>
-            <div style={{width:1,height:16,background:"rgba(255,255,255,0.08)",flexShrink:0}}/>
-            {[
-              {icon:"🌊",val:fmtHeight(data.wh)},
-              {icon:"⏱",val:`${data.sp.toFixed(0)}s`},
-              {icon:"💨",val:`${fmtSpeed(data.ws)}`},
-              {icon:"🌙",val:data.ts.split(" ")[0]},
-            ].map((item,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                <span style={{fontSize:11}}>{item.icon}</span>
-                <span style={{fontSize:11,color:"rgba(255,255,255,0.5)",fontFamily:"'JetBrains Mono',monospace"}}>{item.val}</span>
-              </div>
-            ))}
-            {safeRead("bc_surf_cond_improved",false) && (
-              <div style={{flexShrink:0,background:"rgba(0,255,135,0.1)",border:"1px solid rgba(0,255,135,0.3)",
-                borderRadius:20,padding:"3px 10px",fontSize:9,color:"#00ff87",letterSpacing:1}}>
-                ↑ CONDITIONS IMPROVED
-              </div>
-            )}
           </div>
-        )}
+        </div>
 
         <div className="page">
 
           {/* ── BEACH SELECTOR ── */}
           <div style={{marginBottom:14}}>
             {/* Compact current beach + change */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:44}}>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:38}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"calc(100% - 80px)"}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0,maxWidth:"calc(100% - 100px)"}}>
                   {beach.name}
                 </div>
                 <span style={{fontSize:7,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1,flexShrink:0,
@@ -1353,34 +1258,36 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                   borderRadius:20,padding:"2px 7px"}}>
                   {beach.level.toUpperCase()}
                 </span>
-                {SHARK.includes(beach.id) && <span style={{fontSize:10,flexShrink:0}}>🦈</span>}
+                {SHARK.includes(beach.id) && <span style={{fontSize:7,flexShrink:0}}>🦈</span>}
+                {beach.rip && <span style={{fontSize:7,flexShrink:0}}>⚡</span>}
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
-                <button onClick={()=>{haptic(8);setFavs(p=>p.includes(beach.id)?p.filter(x=>x!==beach.id):[...p,beach.id]);}}
-                  style={{width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",
-                    borderRadius:10,fontSize:18,color:favs.includes(beach.id)?"#fbbf24":"rgba(255,255,255,0.25)",
-                    background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.07)",transition:"color 0.2s"}}>
+                <button onClick={()=>setFavs(p=>p.includes(beach.id)?p.filter(x=>x!==beach.id):[...p,beach.id])}
+                  style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:15,color:favs.includes(beach.id)?"#fbbf24":"rgba(255,255,255,0.2)",
+                    background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.08)",
+                    transition:"color 0.2s,border-color 0.2s",flexShrink:0}}>
                   {favs.includes(beach.id)?"★":"☆"}
                 </button>
                 <button onClick={()=>setShowBeachPicker(p=>!p)}
-                  style={{height:44,padding:"0 16px",borderRadius:10,fontSize:10,letterSpacing:2,
-                    fontFamily:"'Orbitron',monospace",
-                    background:showBeachPicker?"rgba(0,191,255,0.12)":"rgba(255,255,255,0.05)",
-                    border:`1px solid ${showBeachPicker?"rgba(0,191,255,0.3)":"rgba(255,255,255,0.08)"}`,
+                  style={{height:32,padding:"0 14px",borderRadius:20,fontSize:14,letterSpacing:0,
+                    display:"flex",alignItems:"center",gap:5,
+                    background:showBeachPicker?"rgba(0,191,255,0.14)":"rgba(255,255,255,0.06)",
+                    border:`1px solid ${showBeachPicker?"rgba(0,191,255,0.35)":"rgba(255,255,255,0.1)"}`,
                     color:showBeachPicker?"#7dd3fc":"rgba(255,255,255,0.5)"}}>
-                  {showBeachPicker?"CLOSE ✕":"CHANGE"}
+                  <span style={{fontSize:14}}>📍</span>
+                  <span style={{fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>{showBeachPicker?"CLOSE":"CHANGE"}</span>
                 </button>
               </div>
             </div>
 
-            {/* Expandable picker — VERTICAL list (mobile-friendly) */}
+            {/* Expandable picker */}
             {showBeachPicker && (
               <div style={{background:"rgba(0,0,0,0.3)",border:"1px solid rgba(255,255,255,0.07)",borderRadius:12,padding:"12px",marginBottom:8}}>
-                {/* Filter row */}
-                <div className="scroll-row" style={{marginBottom:10}}>
+                <div className="scroll-row" style={{marginBottom:8}}>
                   {SIDES.map(s=>(
                     <button key={s} onClick={()=>setFilter(s)}
-                      style={{flexShrink:0,padding:"6px 14px",borderRadius:100,fontSize:9,letterSpacing:2,
+                      style={{flexShrink:0,padding:"4px 12px",borderRadius:100,fontSize:8,letterSpacing:2,
                         fontFamily:"'Orbitron',monospace",transition:"all 0.15s",
                         background:filter===s?"rgba(0,191,255,0.12)":"rgba(255,255,255,0.04)",
                         border:`1px solid ${filter===s?"rgba(0,191,255,0.35)":"rgba(255,255,255,0.07)"}`,
@@ -1389,32 +1296,18 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                     </button>
                   ))}
                 </div>
-                {/* Vertical list — full-width tappable rows */}
-                <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:320,overflowY:"auto"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:240,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
                   {beachList.map(b=>(
-                    <button key={b.id} onClick={()=>{haptic(8);setBeach(b);setShowBeachPicker(false);}}
-                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                        width:"100%",padding:"12px 14px",borderRadius:10,
-                        background:beach.id===b.id?"rgba(0,191,255,0.1)":"rgba(255,255,255,0.025)",
-                        border:`1px solid ${beach.id===b.id?"rgba(0,191,255,0.35)":"rgba(255,255,255,0.05)"}`,
-                        transition:"all 0.13s",textAlign:"left"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:11,letterSpacing:0.8,
-                          color:beach.id===b.id?"#7dd3fc":"rgba(255,255,255,0.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                          {b.name}
-                        </div>
-                        {favs.includes(b.id)&&<span style={{fontSize:10,color:"#fbbf24",flexShrink:0}}>★</span>}
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                        {allScores.find(s=>s.beach.id===b.id) && (()=>{
-                          const sc = allScores.find(s=>s.beach.id===b.id).sc;
-                          const r = rating(sc);
-                          return <span style={{fontFamily:"'Orbitron',monospace",fontSize:12,color:r.c}}>{sc}</span>;
-                        })()}
-                        <span style={{fontSize:7,color:LVL_COLOR[b.level]??"#888",
-                          background:`${LVL_COLOR[b.level]??'#888'}15`,border:`1px solid ${LVL_COLOR[b.level]??'#888'}30`,
-                          borderRadius:20,padding:"2px 7px",letterSpacing:0.8}}>{b.level}</span>
-                      </div>
+                    <button key={b.id} onClick={()=>{setBeach(b);setShowBeachPicker(false);}}
+                      style={{width:"100%",padding:"11px 14px",borderRadius:10,textAlign:"left",
+                        display:"flex",alignItems:"center",justifyContent:"space-between",
+                        fontFamily:"'Orbitron',monospace",fontSize:12,letterSpacing:1,
+                        transition:"all 0.15s",
+                        background:beach.id===b.id?"rgba(0,191,255,0.12)":"rgba(255,255,255,0.03)",
+                        border:`1px solid ${beach.id===b.id?"rgba(0,191,255,0.4)":"rgba(255,255,255,0.06)"}`,
+                        color:beach.id===b.id?"#7dd3fc":"rgba(255,255,255,0.55)"}}>
+                      <span>{b.name}{favs.includes(b.id)?" ★":""}</span>
+                      <span style={{fontSize:9,color:LVL_COLOR[b.level]??"#888",letterSpacing:0.5,flexShrink:0,opacity:0.7}}>{b.level}</span>
                     </button>
                   ))}
                 </div>
@@ -1510,7 +1403,6 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                         background:`linear-gradient(0deg,${color}07,transparent)`,
                         pointerEvents:"none",borderRadius:"0 0 16px 16px"}}/>
 
-                      {/* Focus mode + session log header row */}
                       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
                         <div style={{fontSize:11,color:"rgba(255,255,255,0.35)",letterSpacing:2}}>SHOULD YOU SURF?</div>
                         <div style={{display:"flex",gap:6,alignItems:"center"}}>
@@ -1525,15 +1417,10 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                               <span style={{fontSize:9,color:"#fbbf24",letterSpacing:1.5}}>DAWN PATROL</span>
                             </div>
                           )}
-                          <button onClick={()=>{haptic(8);setFocusMode(true);}}
-                            style={{width:44,height:44,borderRadius:10,fontSize:16,
-                              background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
-                              color:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center"}}
-                            title="Focus mode">⊞</button>
-                          <button onClick={()=>{haptic(8);setShowScoreInfo(true);}}
-                            style={{width:44,height:44,borderRadius:10,fontSize:16,
-                              background:"rgba(255,255,255,0.05)",border:"1px solid rgba(255,255,255,0.1)",
-                              color:"rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                          <button onClick={()=>setShowScoreInfo(true)}
+                            style={{width:22,height:22,borderRadius:"50%",fontSize:11,
+                              background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.12)",
+                              color:"rgba(255,255,255,0.45)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                             ⓘ
                           </button>
                         </div>
@@ -1543,7 +1430,7 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                         <span style={{fontSize:40,flexShrink:0,lineHeight:1}}>{emoji}</span>
                         <div style={{flex:1,minWidth:0}}>
                           <div style={{fontFamily:"'Orbitron',monospace",
-                            fontSize:"clamp(24px,7vw,38px)",lineHeight:1,letterSpacing:2,
+                            fontSize:"clamp(18px,5.5vw,34px)",lineHeight:1,letterSpacing:1,
                             color,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",
                             textShadow:`0 0 28px ${color}40`}}>
                             {dec}
@@ -1603,38 +1490,16 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
 
                     {/* SHARE CONDITIONS */}
                     <button onClick={()=>{
-                      haptic(8);
                       const txt = `🌊 ${beach.name} — Score ${data.sc}/100\n${dec}\n${data.wh.toFixed(1)}m · ${data.sp.toFixed(0)}s · ${wc} ${data.ws.toFixed(0)}km/h\ncheck-eosin.vercel.app`;
                       if(navigator.share){navigator.share({title:`${beach.name} conditions`,text:txt});}
                       else{navigator.clipboard?.writeText(txt).then(()=>alert("Copied to clipboard!"));}
                     }} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-                        padding:"12px",borderRadius:10,
+                        padding:"9px",borderRadius:10,
                         background:"rgba(0,191,255,0.04)",border:"1px solid rgba(0,191,255,0.12)",
-                        color:"rgba(0,191,255,0.5)",fontSize:10,letterSpacing:2,width:"100%",
-                        fontFamily:"'Orbitron',monospace",transition:"all 0.15s",minHeight:44}}>
+                        color:"rgba(0,191,255,0.5)",fontSize:8,letterSpacing:2,width:"100%",
+                        fontFamily:"'Orbitron',monospace",transition:"all 0.15s"}}>
                       📤 SHARE CONDITIONS
                     </button>
-
-                    {/* LOG SESSION */}
-                    <div style={{display:"flex",gap:7}}>
-                      <button onClick={()=>setShowLog(true)}
-                        style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-                          padding:"12px",borderRadius:10,minHeight:44,
-                          background:"rgba(0,255,135,0.04)",border:"1px solid rgba(0,255,135,0.12)",
-                          color:"rgba(0,255,135,0.5)",fontSize:10,letterSpacing:2,
-                          fontFamily:"'Orbitron',monospace"}}>
-                        📓 LOG SESSION
-                      </button>
-                      {sessionLog.length>0 && (
-                        <button onClick={()=>setShowLog(2)}
-                          style={{padding:"12px 16px",borderRadius:10,minHeight:44,
-                            background:"rgba(255,255,255,0.03)",border:"1px solid rgba(255,255,255,0.08)",
-                            color:"rgba(255,255,255,0.35)",fontSize:10,letterSpacing:1,
-                            fontFamily:"'Orbitron',monospace"}}>
-                          {sessionLog.length} LOGS
-                        </button>
-                      )}
-                    </div>
 
                     {/* EXPAND DETAIL TOGGLE */}
                     <button onClick={()=>setDetailExpanded(p=>!p)}
@@ -1933,81 +1798,15 @@ function WaveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         </div>
       </div>
 
-      {/* ── FOCUS MODE OVERLAY ── */}
-      {focusMode && data && (()=>{
-        const r = rating(data.sc);
-        return (
-          <div style={{position:"fixed",inset:0,zIndex:600,background:"#020910",
-            display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20}}
-            onClick={()=>setFocusMode(false)}>
-            <div style={{fontSize:11,color:"rgba(255,255,255,0.2)",letterSpacing:3}}>{beach.name.toUpperCase()} · TAP TO CLOSE</div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:72,color:r.c,lineHeight:1,
-              textShadow:`0 0 60px ${r.c}60`}}>{data.sc}</div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:22,color:"rgba(255,255,255,0.7)",letterSpacing:3}}>{r.l.toUpperCase()}</div>
-            <div style={{display:"flex",gap:24,marginTop:8}}>
-              {[
-                {icon:"🌊",val:fmtHeight(data.wh),lbl:"SWELL"},
-                {icon:"⏱",val:`${data.sp.toFixed(0)}s`,lbl:"PERIOD"},
-                {icon:"💨",val:fmtSpeed(data.ws),lbl:"WIND"},
-              ].map((x,i)=>(
-                <div key={i} style={{textAlign:"center"}}>
-                  <div style={{fontSize:22}}>{x.icon}</div>
-                  <div style={{fontFamily:"'Orbitron',monospace",fontSize:20,color:"#fff",marginTop:4}}>{x.val}</div>
-                  <div style={{fontSize:9,color:"rgba(255,255,255,0.3)",letterSpacing:2,marginTop:2}}>{x.lbl}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* ── SESSION LOG MODAL ── */}
-      {showLog && (
-        <div className="modal-overlay" onClick={()=>setShowLog(false)}>
-          <div className="modal-sheet" onClick={e=>e.stopPropagation()} style={{borderColor:"rgba(0,255,135,0.15)"}}>
-            <div className="modal-handle"/>
-            {showLog===2 ? (
-              <>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,letterSpacing:2,color:"#00ff87",marginBottom:16}}>📓 SESSION LOG</div>
-                {sessionLog.length===0
-                  ? <div style={{fontSize:11,color:"rgba(255,255,255,0.3)",padding:"20px 0",textAlign:"center"}}>No sessions logged yet.</div>
-                  : <div style={{display:"flex",flexDirection:"column",gap:8,maxHeight:"60vh",overflowY:"auto"}}>
-                      {sessionLog.map(s=>(
-                        <div key={s.id} style={{background:"rgba(0,255,135,0.04)",border:"1px solid rgba(0,255,135,0.12)",borderRadius:10,padding:"10px 14px"}}>
-                          <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                            <span style={{fontFamily:"'Orbitron',monospace",fontSize:11,color:"#00ff87"}}>{s.beach}</span>
-                            <span style={{fontSize:9,color:"rgba(255,255,255,0.25)"}}>{s.ts}</span>
-                          </div>
-                          <div style={{fontSize:11,color:"rgba(255,255,255,0.55)"}}>{s.score}/100 · {s.wh}m · {s.sp}s · {s.wind}</div>
-                          {s.note && <div style={{fontSize:10,color:"rgba(255,255,255,0.35)",marginTop:4,fontStyle:"italic"}}>"{s.note}"</div>}
-                        </div>
-                      ))}
-                    </div>}
-                <button onClick={()=>setShowLog(false)}
-                  style={{width:"100%",padding:"12px",borderRadius:10,marginTop:16,
-                    background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",
-                    color:"rgba(255,255,255,0.4)",fontSize:11,fontFamily:"'Orbitron',monospace",letterSpacing:2}}>CLOSE</button>
-              </>
-            ) : (
-              <>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,letterSpacing:2,color:"#00ff87",marginBottom:16}}>📓 LOG THIS SESSION</div>
-                <div style={{background:"rgba(0,255,135,0.04)",border:"1px solid rgba(0,255,135,0.12)",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
-                  <div style={{fontFamily:"'Orbitron',monospace",fontSize:12,color:"#00ff87"}}>{beach.name} · {data?.sc}/100</div>
-                  <div style={{fontSize:11,color:"rgba(255,255,255,0.4)",marginTop:4}}>{data?.wh.toFixed(1)}m · {data?.sp.toFixed(0)}s · {wc} {data?.ws.toFixed(0)}km/h</div>
-                </div>
-                <input value={logNote} onChange={e=>setLogNote(e.target.value)} placeholder="Optional note (e.g. 'Fun session, got barrelled at 7am')"
-                  style={{width:"100%",padding:"12px",borderRadius:10,marginBottom:12,
-                    background:"rgba(255,255,255,0.04)",border:"1px solid rgba(255,255,255,0.1)",
-                    color:"#fff",fontSize:12,outline:"none"}}/>
-                <button onClick={logSession}
-                  style={{width:"100%",padding:"12px",borderRadius:10,
-                    background:"rgba(0,255,135,0.1)",border:"1px solid rgba(0,255,135,0.3)",
-                    color:"#00ff87",fontSize:11,fontFamily:"'Orbitron',monospace",letterSpacing:2}}>SAVE SESSION</button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── BOTTOM NAV ── */}
+      <nav className="bottom-nav">
+        {TABS.map(t=>(
+          <button key={t.id} className={tab===t.id?"active":""} onClick={()=>setTab(t.id)}>
+            <span className="nav-icon">{t.icon}</span>
+            <span className="nav-label">{t.l.toUpperCase()}</span>
+          </button>
+        ))}
+      </nav>
     </>
   );
 }
@@ -2037,12 +1836,6 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
   const [units, setUnits] = useStoredState("bc_units", { height:"m", temp:"C", speed:"kmh", pressure:"bar" });
   const hr = now.getHours();
   const siteList = SITES.filter(s => filter==="All" || s.side===filter);
-  const swipeStartX = useRef(null);
-  const [diveLog, setDiveLog] = useStoredState("bc_dive_log", []);
-  const [showDiveLog, setShowDiveLog] = useState(false);
-  const [diveLogNote, setDiveLogNote] = useState("");
-  const [showVizReport, setShowVizReport] = useState(false);
-  const [vizReports, setVizReports] = useStoredState("bc_viz_reports", []);
 
   const fetchData = useCallback(async (s, silent=false) => {
     silent ? setRefreshing(true) : (setLoading(true), setErr(null), setData(null));
@@ -2126,14 +1919,6 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
 
 
   useEffect(()=>{
-    const onRefresh = () => handleDivePullRefresh();
-    const onSettings = () => setShowDiveSettings(true);
-    window.addEventListener("bc_refresh", onRefresh);
-    window.addEventListener("bc_settings", onSettings);
-    return () => { window.removeEventListener("bc_refresh", onRefresh); window.removeEventListener("bc_settings", onSettings); };
-  },[]);
-
-  useEffect(()=>{
     safeWrite("bc_dive_site", site.id);
   },[site]);
 
@@ -2211,7 +1996,7 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
             linear-gradient(180deg, #020d0f 0%, #030f12 50%, #020b0d 100%);
           color:#e0f7f5;
           font-family:'JetBrains Mono',monospace;
-          padding-bottom:60px;
+          padding-bottom:0;
           overflow-x:hidden;
           width:100%; max-width:100vw;
         }
@@ -2255,30 +2040,23 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
 
         .page {
           width:100%; max-width:min(820px,100vw);
-          margin:0 auto; padding:0 14px 32px;
+          margin:0 auto; padding:var(--page-top,12px) 14px 24px;
           overflow-x:hidden; position:relative; z-index:1;
         }
 
         .scroll-row { display:flex; gap:6px; overflow-x:auto; padding-bottom:2px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
         .scroll-row::-webkit-scrollbar { display:none; }
 
-        /* ── TOP TABS (dive teal) ── */
         .tabs {
-          display:flex; gap:0; overflow-x:auto; -webkit-overflow-scrolling:touch;
-          scrollbar-width:none; padding:0 14px;
-          margin-bottom:10px; border-bottom:1px solid rgba(0,229,204,0.12);
-          background:rgba(2,13,15,0.6);
-          position:sticky; top:0; z-index:90;
+          display:flex;
+          gap:2px;
+          background:rgba(0,229,204,0.04);
+          border:1px solid rgba(0,229,204,0.1);
+          border-radius:10px; padding:3px;
+          margin-bottom:var(--section-gap,14px);
+          overflow-x:auto; scrollbar-width:none;
         }
         .tabs::-webkit-scrollbar { display:none; }
-        .tab-btn {
-          flex-shrink:0; padding:11px 14px; font-family:'Orbitron',monospace;
-          font-size:9px; letter-spacing:1.5px; color:rgba(0,229,204,0.28);
-          border-bottom:2px solid transparent; transition:all 0.18s; white-space:nowrap;
-        }
-        .tab-btn.active { color:#00e5cc; border-bottom-color:#00e5cc; }
-        .tab-btn:active { transform:scale(0.95); }
-        .bottom-nav-dive { display:none; }
 
         .card {
           background:rgba(0,229,204,0.03);
@@ -2287,8 +2065,8 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           min-width:0; overflow:hidden;
         }
         .card-label {
-          font-size:9px; letter-spacing:2px;
-          color:rgba(0,229,204,0.4);
+          font-size:7.5px; letter-spacing:3px;
+          color:rgba(0,229,204,0.35);
           text-transform:uppercase; margin-bottom:10px;
           font-family:'Orbitron',monospace;
         }
@@ -2303,37 +2081,30 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         }
         @media(min-width:480px){.stat-grid{grid-template-columns:repeat(3,1fr);}}
         @media(min-width:700px){.stat-grid{grid-template-columns:repeat(4,1fr);}}
-        @media(min-width:700px) and (orientation:landscape){.landscape-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}}
 
         .stat-cell {
           background:rgba(0,229,204,0.03);
           border:1px solid rgba(0,229,204,0.07);
           border-radius:10px; padding:11px 12px; min-width:0;
         }
-        /* ── TABS — hidden, replaced by bottom nav ── */
-        .tabs { display:none; }
+        /* ── TABS — shown, replaced bottom nav ── */
+        .tabs { display:flex !important; }
+        .tab-btn {
+          flex:1; padding:7px 0; border-radius:7px;
+          font-family:'Orbitron',monospace; font-size:8.5px; letter-spacing:0.8px;
+          color:rgba(0,229,204,0.3);
+          transition:all 0.18s; text-align:center; white-space:nowrap; overflow:hidden;
+        }
+        .tab-btn.active {
+          background:linear-gradient(135deg,rgba(0,229,204,0.18) 0%,rgba(0,100,90,0.12) 100%);
+          color:#00e5cc;
+          box-shadow:0 0 14px rgba(0,229,204,0.12), inset 0 1px 0 rgba(0,229,204,0.2);
+          border:1px solid rgba(0,229,204,0.2);
+        }
+        .tab-btn:not(.active):hover { color:rgba(0,229,204,0.55); background:rgba(0,229,204,0.04); }
 
-        /* ── BOTTOM NAV (dive teal theme) ── */
-        .bottom-nav-dive {
-          position:fixed; bottom:0; left:0; right:0; z-index:200;
-          display:flex; align-items:stretch;
-          background:rgba(2,13,15,0.97);
-          backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
-          border-top:1px solid rgba(0,229,204,0.12);
-          padding-bottom:env(safe-area-inset-bottom);
-        }
-        .bottom-nav-dive button {
-          flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
-          gap:3px; padding:9px 0 8px;
-          color:rgba(0,229,204,0.28);
-          font-family:'Orbitron',monospace; font-size:8px; letter-spacing:0.5px;
-          transition:all 0.18s; min-width:0; overflow:hidden;
-        }
-        .bottom-nav-dive button.active { color:#00e5cc; }
-        .bottom-nav-dive button.active .nav-icon { filter:drop-shadow(0 0 6px rgba(0,229,204,0.6)); }
-        .bottom-nav-dive button:active { transform:scale(0.92); }
-        .nav-icon { font-size:17px; line-height:1; }
-        .nav-label { font-size:7px; letter-spacing:1px; white-space:nowrap; }
+        /* ── BOTTOM NAV (dive teal theme) — hidden ── */
+        .bottom-nav-dive { display:none !important; }
 
         .card {
           background:rgba(0,229,204,0.03);
@@ -2368,60 +2139,44 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         .stat-value { font-family:'Orbitron',monospace; font-size:18px; color:#e0f7f5; line-height:1.05; }
         .stat-sub   { font-size:11px; color:rgba(0,229,204,0.4); margin-top:3px; line-height:1.3; }
 
-        /* ── MODAL (dive themed) — anchored to TOP ── */
+        /* ── MODAL (dive themed) ── */
         .modal-overlay-d {
           position:fixed; inset:0; z-index:500;
-          background:rgba(0,0,0,0.78);
+          background:rgba(0,0,0,0.8);
           backdrop-filter:blur(8px);
-          display:flex; align-items:flex-start; justify-content:center;
-          padding:env(safe-area-inset-top,0) 0 0;
-          overflow-y:auto;
+          display:flex; align-items:center; justify-content:center;
+          padding:16px;
         }
         .modal-sheet-d {
-          width:100%; max-width:820px;
+          width:100%; max-width:500px;
+          max-height:calc(100dvh - 32px);
+          overflow-y:auto;
           background:#030f12;
-          border:1px solid rgba(0,229,204,0.15);
-          border-top:none;
-          border-radius:0 0 20px 20px;
-          padding:16px 18px 32px;
-          animation:slideDown 0.28s cubic-bezier(0.34,1.56,0.64,1) forwards;
-          max-height:92vh; overflow-y:auto;
+          border:1px solid rgba(0,229,204,0.2);
+          border-radius:20px;
+          padding:20px 18px 24px;
+          animation:modalPop 0.25s cubic-bezier(0.34,1.56,0.64,1) forwards;
         }
-        @keyframes slideDown { from{opacity:0;transform:translateY(-12px)} to{opacity:1;transform:translateY(0)} }
-        .modal-handle-d {
-          width:36px; height:4px; background:rgba(0,229,204,0.2);
-          border-radius:2px; margin:0 auto 18px;
-        }
-
-        /* Shared icon button (dive header) */
-        .hdr-icon-btn {
-          width:44px; height:44px; border-radius:10px; display:flex; align-items:center;
-          justify-content:center; font-size:16px; color:rgba(0,229,204,0.4);
-          background:rgba(0,229,204,0.04); border:1px solid rgba(0,229,204,0.1);
-          transition:all 0.15s; flex-shrink:0;
-        }
-        .hdr-icon-btn:active { transform:scale(0.93); }
-        @keyframes spin { to { transform:rotate(360deg); } }
-        .spin-anim { animation:spin 0.8s linear infinite; }
+        .modal-handle-d { display:none; }
 
         /* ── INTERACTIVE CHECKLIST ── */
         .check-item-d { transition:opacity 0.2s; }
         .check-item-d.done { opacity:0.4; }
         .check-box-d {
-          width:22px; height:22px; border-radius:6px; border:1.5px solid rgba(0,229,204,0.2);
+          width:20px; height:20px; border-radius:6px; border:1.5px solid rgba(0,229,204,0.2);
           display:flex; align-items:center; justify-content:center; flex-shrink:0;
           transition:all 0.18s; font-size:11px;
         }
         .check-box-d.checked { background:rgba(0,229,204,0.12); border-color:rgba(0,229,204,0.5); }
 
-        /* Ambient wave background — opacity unified with surf */
-        .wave-bg { position:fixed; bottom:0; left:0; width:100%; height:160px; pointer-events:none; z-index:0; opacity:0.04; }
+        @keyframes spinCw { to{transform:rotate(360deg)} }
+        .refresh-spinning { animation:spinCw 0.8s linear infinite; display:inline-block; }
+
+        /* Ambient wave background */
+        .wave-bg { position:fixed; bottom:0; left:0; width:100%; height:160px; pointer-events:none; z-index:0; opacity:0.035; }
         .wave1 { animation:waveBg1 20s linear infinite; }
         .wave2 { animation:waveBg2 15s linear infinite; }
         .wave3 { animation:waveBg3 28s linear infinite; }
-        @keyframes waveBg1 { to{transform:translateX(-50%)} }
-        @keyframes waveBg2 { from{transform:translateX(-50%)} to{transform:translateX(0)} }
-        @keyframes waveBg3 { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
 
         /* Sonar ping on verdict */
         .sonar-ring {
@@ -2529,76 +2284,53 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         </div>
       )}
 
-      <div className="shell" style={{position:"relative",zIndex:1}}
-        onTouchStart={e=>{ swipeStartX.current = e.touches[0].clientX; }}
-        onTouchEnd={e=>{ if(swipeStartX.current===null) return; const dx=e.changedTouches[0].clientX-swipeStartX.current; if(Math.abs(dx)>50){ const ids=DIVE_TABS.map(t=>t.id); const idx=ids.indexOf(tab); const nxt=dx<0?ids[Math.min(idx+1,ids.length-1)]:ids[Math.max(idx-1,0)]; if(nxt!==tab){haptic(8);setTab(nxt);} } swipeStartX.current=null; }}>
+      <div className="shell" style={{position:"relative",zIndex:1}}>
 
         {/* ── HEADER ── */}
         <div className="hdr" style={hideHeader ? {display:"none"} : undefined}>
           <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0,flex:1}}>
-            <div style={{width:36,height:36,borderRadius:10,
+            <div style={{width:32,height:32,borderRadius:8,
               background:"linear-gradient(135deg,rgba(0,60,55,0.6),rgba(0,229,204,0.25))",
               border:"1px solid rgba(0,229,204,0.22)",
-              display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>🤿</div>
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🤿</div>
             <div style={{minWidth:0}}>
               <div style={{fontFamily:"'Orbitron',monospace",fontSize:14,fontWeight:700,letterSpacing:3,lineHeight:1,color:"#fff"}}>DIVECHECK</div>
               <div style={{display:"flex",alignItems:"center",gap:6,marginTop:2}}>
-                <span style={{fontSize:9,color:"rgba(0,229,204,0.5)",letterSpacing:2}}>CAPE TOWN</span>
+                <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"rgba(0,229,204,0.5)",letterSpacing:2}}>CAPE TOWN</span>
+                {(refreshing||isRefreshingDive)
+                  ? <span className="shimmer" style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"#00e5cc",letterSpacing:1}}>· SYNCING</span>
+                  : lastRef && <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:9,color:"rgba(255,255,255,0.2)",letterSpacing:1}}>· ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}</span>
+                }
               </div>
             </div>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-            <button className="hdr-icon-btn" onClick={handleDivePullRefresh}>
-              <span className={isRefreshingDive?"spin-anim":""}>↻</span>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
+            <button onClick={handleDivePullRefresh} title="Refresh"
+              style={{width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
+                background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.1)",
+                fontSize:14,color:"rgba(0,229,204,0.4)"}}>
+              <span className={isRefreshingDive?"refresh-spinning":""}>↻</span>
             </button>
-            <button className="hdr-icon-btn" onClick={()=>setShowDiveSettings(true)}>⚙</button>
-          </div>
-        </div>
-
-        {/* ── TABS — TOP ── */}
-        <div className="tabs">
-          {DIVE_TABS.map(t=>(
-            <button key={t.id} className={`tab-btn${tab===t.id?" active":""}`}
-              onClick={()=>{haptic(6);setTab(t.id);}}>
-              {t.id==="now"?"🤿":t.id==="forecast"?"📅":t.id==="tides"?"🌊":t.id==="sites"?"📍":t.id==="safety"?"🛟":"🧭"} {t.l}
+            <button onClick={()=>setShowDiveSettings(true)} title="Settings"
+              style={{width:30,height:30,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
+                background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.1)",
+                fontSize:14,color:"rgba(0,229,204,0.4)"}}>
+              ⚙
             </button>
-          ))}
-        </div>
-
-        {/* ── AT-A-GLANCE STICKY BAR ── */}
-        {data && (
-          <div style={{
-            position:"sticky",top:hideHeader?44:88,zIndex:80,
-            background:"rgba(2,13,15,0.92)",backdropFilter:"blur(16px)",WebkitBackdropFilter:"blur(16px)",
-            borderBottom:"1px solid rgba(0,229,204,0.08)",
-            padding:"7px 14px",display:"flex",alignItems:"center",gap:12,overflowX:"auto",scrollbarWidth:"none"
-          }}>
-            <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-              <span style={{fontSize:16}}>{verdict?.icon}</span>
-              <span style={{fontFamily:"'Orbitron',monospace",fontSize:13,color:verdict?.color,letterSpacing:1}}>{verdict?.verdict}</span>
+            <div className="mode-pill">
+              <button className="mode-btn inactive" onClick={()=>setMode("surf")}>🌊 SURF</button>
+              <button className="mode-btn dive-active" onClick={()=>setMode("dive")}>🤿 DIVE</button>
             </div>
-            <div style={{width:1,height:16,background:"rgba(0,229,204,0.1)",flexShrink:0}}/>
-            {[
-              {icon:"🌊",val:fmtHeight(data.wh)},
-              {icon:"💨",val:`${fmtSpeed(data.ws)}`},
-              {icon:"👁",val:vis?.est ?? "—"},
-              {icon:"🌙",val:data.ts.split(" ")[0]},
-            ].map((item,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:4,flexShrink:0}}>
-                <span style={{fontSize:11}}>{item.icon}</span>
-                <span style={{fontSize:11,color:"rgba(0,229,204,0.55)",fontFamily:"'JetBrains Mono',monospace"}}>{item.val}</span>
-              </div>
-            ))}
           </div>
-        )}
+        </div>
 
         <div className="page">
 
           {/* ── SITE SELECTOR ── */}
           <div style={{marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:44}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:38}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:"calc(100% - 90px)"}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:0.8,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0,maxWidth:"calc(100% - 100px)"}}>
                   {site.name}
                 </div>
                 {MPA_SITES.includes(site.id) && (
@@ -2612,34 +2344,32 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                     letterSpacing:1,flexShrink:0}}>⛵</span>
                 )}
               </div>
-              <div style={{display:"flex",gap:6,flexShrink:0}}>
+              <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center"}}>
                 <button onClick={()=>setFavs(p=>p.includes(site.id)?p.filter(x=>x!==site.id):[...p,site.id])}
-                  style={{fontSize:13,color:favs.includes(site.id)?"#ffb300":"rgba(0,229,204,0.2)",transition:"color 0.2s"}}>
-                  {favs.includes(site.id)?"★":"☆"}
-                </button>
-                <button onClick={()=>{haptic(8);setFavs(p=>p.includes(site.id)?p.filter(x=>x!==site.id):[...p,site.id]);}}
-                  style={{width:44,height:44,display:"flex",alignItems:"center",justifyContent:"center",
-                    borderRadius:10,fontSize:18,color:favs.includes(site.id)?"#fbbf24":"rgba(255,255,255,0.22)",
-                    background:"rgba(0,229,204,0.03)",border:"1px solid rgba(0,229,204,0.1)",transition:"color 0.2s"}}>
+                  style={{width:32,height:32,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",
+                    fontSize:15,color:favs.includes(site.id)?"#ffb300":"rgba(0,229,204,0.25)",
+                    background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.1)",
+                    transition:"color 0.2s,border-color 0.2s",flexShrink:0}}>
                   {favs.includes(site.id)?"★":"☆"}
                 </button>
                 <button onClick={()=>setShowPicker(p=>!p)}
-                  style={{height:44,padding:"0 16px",borderRadius:10,fontSize:10,letterSpacing:2,
-                    fontFamily:"'Orbitron',monospace",
-                    background:showPicker?"rgba(0,229,204,0.1)":"rgba(0,229,204,0.04)",
-                    border:`1px solid ${showPicker?"rgba(0,229,204,0.3)":"rgba(0,229,204,0.1)"}`,
-                    color:showPicker?"#00e5cc":"rgba(0,229,204,0.4)"}}>
-                  {showPicker?"CLOSE ✕":"CHANGE"}
+                  style={{height:32,padding:"0 14px",borderRadius:20,fontSize:14,letterSpacing:0,
+                    display:"flex",alignItems:"center",gap:5,
+                    background:showPicker?"rgba(0,229,204,0.12)":"rgba(0,229,204,0.05)",
+                    border:`1px solid ${showPicker?"rgba(0,229,204,0.35)":"rgba(0,229,204,0.12)"}`,
+                    color:showPicker?"#00e5cc":"rgba(0,229,204,0.45)"}}>
+                  <span style={{fontSize:14}}>📍</span>
+                  <span style={{fontFamily:"'Orbitron',monospace",fontSize:8,letterSpacing:1}}>{showPicker?"CLOSE":"CHANGE"}</span>
                 </button>
               </div>
             </div>
 
             {showPicker && (
               <div style={{background:"rgba(0,0,0,0.4)",border:"1px solid rgba(0,229,204,0.1)",borderRadius:12,padding:"12px",marginBottom:8}}>
-                <div className="scroll-row" style={{marginBottom:10}}>
+                <div className="scroll-row" style={{marginBottom:8}}>
                   {DIVE_SIDES.map(s=>(
                     <button key={s} onClick={()=>setFilter(s)}
-                      style={{flexShrink:0,padding:"6px 14px",borderRadius:100,fontSize:9,letterSpacing:2,
+                      style={{flexShrink:0,padding:"4px 12px",borderRadius:100,fontSize:7.5,letterSpacing:2,
                         fontFamily:"'Orbitron',monospace",transition:"all 0.15s",
                         background:filter===s?"rgba(0,229,204,0.1)":"rgba(0,229,204,0.03)",
                         border:`1px solid ${filter===s?"rgba(0,229,204,0.35)":"rgba(0,229,204,0.08)"}`,
@@ -2648,26 +2378,18 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                     </button>
                   ))}
                 </div>
-                {/* Vertical full-width list */}
-                <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:320,overflowY:"auto"}}>
+                <div style={{display:"flex",flexDirection:"column",gap:4,maxHeight:240,overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
                   {siteList.map(s=>(
-                    <button key={s.id} onClick={()=>{haptic(8);setSite(s);setShowPicker(false);}}
-                      style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                        width:"100%",padding:"12px 14px",borderRadius:10,textAlign:"left",
-                        background:site.id===s.id?"rgba(0,229,204,0.08)":"rgba(0,229,204,0.02)",
-                        border:`1px solid ${site.id===s.id?"rgba(0,229,204,0.35)":"rgba(0,229,204,0.07)"}`,
-                        transition:"all 0.13s"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
-                        <div style={{fontFamily:"'Orbitron',monospace",fontSize:11,letterSpacing:0.8,
-                          color:site.id===s.id?"#00e5cc":"rgba(0,229,204,0.6)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                          {s.name}
-                        </div>
-                        {favs.includes(s.id)&&<span style={{fontSize:10,color:"#fbbf24",flexShrink:0}}>★</span>}
-                      </div>
-                      <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
-                        {s.mpa&&<span style={{fontSize:7,color:"#00ff9d",background:"rgba(0,255,157,0.1)",border:"1px solid rgba(0,255,157,0.2)",borderRadius:20,padding:"2px 6px",letterSpacing:0.8}}>MPA</span>}
-                        <span style={{fontSize:7,color:"rgba(0,229,204,0.4)",letterSpacing:0.8}}>{s.entryType.includes("Boat")?"🚤":"🏊"}</span>
-                      </div>
+                    <button key={s.id} onClick={()=>{setSite(s);setShowPicker(false);}}
+                      style={{width:"100%",padding:"11px 14px",borderRadius:10,textAlign:"left",
+                        display:"flex",alignItems:"center",justifyContent:"space-between",
+                        fontFamily:"'Orbitron',monospace",fontSize:11,letterSpacing:0.8,
+                        transition:"all 0.15s",
+                        background:site.id===s.id?"rgba(0,229,204,0.1)":"rgba(0,229,204,0.03)",
+                        border:`1px solid ${site.id===s.id?"rgba(0,229,204,0.4)":"rgba(0,229,204,0.08)"}`,
+                        color:site.id===s.id?"#00e5cc":"rgba(0,229,204,0.55)"}}>
+                      <span>{s.name}{favs.includes(s.id)?" ★":""}</span>
+                      <span style={{fontSize:8,color:"rgba(0,229,204,0.4)",letterSpacing:0.5,flexShrink:0}}>{s.side}</span>
                     </button>
                   ))}
                 </div>
@@ -2699,6 +2421,13 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
           {/* ── CONTENT ── */}
           {data && !loading && (
             <div className="rise">
+              <div className="tabs">
+                {DIVE_TABS.map(t=>(
+                  <button key={t.id} className={`tab-btn${tab===t.id?" active":""}`} onClick={()=>setTab(t.id)}>
+                    {t.l}
+                  </button>
+                ))}
+              </div>
 
               {/* ════════ NOW ════════ */}
               {tab==="now" && (
@@ -2726,9 +2455,9 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                         fontFamily:"'Orbitron',monospace"}}>
                         DIVE CONDITIONS — {site.name.toUpperCase()}
                       </div>
-                      <button onClick={()=>{haptic(8);setShowDiveScoreInfo(true);}}
-                        style={{width:44,height:44,borderRadius:10,fontSize:16,
-                          background:"rgba(0,229,204,0.05)",border:"1px solid rgba(0,229,204,0.12)",
+                      <button onClick={()=>setShowDiveScoreInfo(true)}
+                        style={{width:22,height:22,borderRadius:"50%",fontSize:11,
+                          background:"rgba(0,229,204,0.06)",border:"1px solid rgba(0,229,204,0.15)",
                           color:"rgba(0,229,204,0.5)",display:"flex",alignItems:"center",justifyContent:"center"}}>
                         ⓘ
                       </button>
@@ -2750,14 +2479,14 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                       </div>
                     </div>
 
-                    {/* Depth rings — 2×2 grid */}
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,
+                    {/* Depth rings — 2×2 grid for mobile breathing room */}
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,
                       padding:"12px 0",borderTop:`1px solid ${verdict.color}15`,
-                      borderBottom:`1px solid ${verdict.color}15`,marginBottom:12}}>
-                      <DepthRing value={fmtHeight(data.wh).replace(/[^\d.]/g,"")} max={3} color={data.wh<1?"#00ff9d":data.wh<2?"#ffb300":"#ff4444"} label="SWELL" unit={units.height==="ft"?"ft":"m"} size={84}/>
-                      <DepthRing value={Math.round(data.ws)} max={50} color={data.ws<15?"#00ff9d":data.ws<25?"#ffb300":"#ff4444"} label="WIND" unit={units.speed==="kts"?"kts":"km/h"} size={84}/>
-                      <DepthRing value={fmtTemp(data.wt).replace(/[^\d.]/g,"")} max={units.temp==="F"?70:25} color={data.wt>=16?"#fde68a":data.wt>=14?"#6ee7b7":"#93c5fd"} label="WATER" unit={units.temp==="F"?"°F":"°C"} size={84}/>
-                      <DepthRing value={data.tl.toFixed(1)} max={2} color="#00e5cc" label="TIDE" unit="m" size={84}/>
+                      borderBottom:`1px solid ${verdict.color}15`,marginBottom:12,justifyItems:"center"}}>
+                      <DepthRing value={fmtHeight(data.wh)} max={3} color={data.wh<1?"#00ff9d":data.wh<2?"#ffb300":"#ff4444"} label="SWELL" unit={units.height==="ft"?"ft":"m"} size={76}/>
+                      <DepthRing value={Math.round(data.ws)} max={50} color={data.ws<15?"#00ff9d":data.ws<25?"#ffb300":"#ff4444"} label="WIND" unit={units.speed==="kts"?"kts":"km/h"} size={76}/>
+                      <DepthRing value={fmtTemp(data.wt).replace("°C","").replace("°F","")} max={units.temp==="F"?70:25} color={data.wt>=16?"#fde68a":data.wt>=14?"#6ee7b7":"#93c5fd"} label="WATER" unit={units.temp==="F"?"°F":"°C"} size={76}/>
+                      <DepthRing value={data.tl.toFixed(1)} max={2} color="#00e5cc" label="TIDE" unit="m" size={76}/>
                     </div>
 
                     {/* Best dive window */}
@@ -2877,58 +2606,6 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
                       ))}
                     </div>
                   </div>
-
-                  {/* SHARE + LOG + VIZ REPORT */}
-                  <button onClick={()=>{
-                    haptic(8);
-                    const txt = `🤿 ${site.name} — ${verdict.verdict}\n${vis.est} viz · ${data.wh.toFixed(1)}m swell · ${data.ws.toFixed(0)}km/h wind\ncheck-eosin.vercel.app`;
-                    if(navigator.share){navigator.share({title:`${site.name} dive conditions`,text:txt});}
-                    else{navigator.clipboard?.writeText(txt).then(()=>alert("Copied to clipboard!"));}
-                  }} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-                    padding:"12px",borderRadius:10,minHeight:44,
-                    background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.12)",
-                    color:"rgba(0,229,204,0.5)",fontSize:10,letterSpacing:2,width:"100%",
-                    fontFamily:"'Orbitron',monospace"}}>
-                    📤 SHARE CONDITIONS
-                  </button>
-
-                  <div style={{display:"flex",gap:7}}>
-                    <button onClick={()=>setShowDiveLog(true)}
-                      style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-                        padding:"12px",borderRadius:10,minHeight:44,
-                        background:"rgba(0,255,157,0.04)",border:"1px solid rgba(0,255,157,0.12)",
-                        color:"rgba(0,255,157,0.5)",fontSize:10,letterSpacing:2,
-                        fontFamily:"'Orbitron',monospace"}}>
-                      📓 LOG DIVE
-                    </button>
-                    <button onClick={()=>setShowVizReport(true)}
-                      style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-                        padding:"12px",borderRadius:10,minHeight:44,
-                        background:"rgba(0,191,255,0.04)",border:"1px solid rgba(0,191,255,0.12)",
-                        color:"rgba(0,191,255,0.5)",fontSize:10,letterSpacing:2,
-                        fontFamily:"'Orbitron',monospace"}}>
-                      👁 VIZ REPORT
-                    </button>
-                  </div>
-
-                  {/* Community Viz Reports */}
-                  {vizReports.filter(r=>r.siteId===site.id).length > 0 && (
-                    <div className="card">
-                      <div className="card-label">👥 COMMUNITY VIZ REPORTS — {site.name.toUpperCase()}</div>
-                      <div style={{display:"flex",flexDirection:"column",gap:6}}>
-                        {vizReports.filter(r=>r.siteId===site.id).slice(0,5).map((r,i)=>(
-                          <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                            padding:"8px 10px",background:"rgba(0,191,255,0.04)",border:"1px solid rgba(0,191,255,0.1)",borderRadius:8}}>
-                            <div>
-                              <span style={{fontFamily:"'Orbitron',monospace",fontSize:12,color:r.vizColor}}>{r.viz}m viz</span>
-                              {r.note && <span style={{fontSize:10,color:"rgba(255,255,255,0.3)",marginLeft:8}}>"{r.note}"</span>}
-                            </div>
-                            <span style={{fontSize:9,color:"rgba(255,255,255,0.2)"}}>{r.ts}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
 
                 </div>
               )}
@@ -3277,68 +2954,15 @@ function DiveCheckMode({ setMode, hideHeader=false, setHeaderMeta, onReady }) {
         </div>
       </div>
 
-      {/* ── DIVE LOG MODAL ── */}
-      {showDiveLog && (
-        <div className="modal-overlay-d" onClick={()=>setShowDiveLog(false)}>
-          <div className="modal-sheet-d" onClick={e=>e.stopPropagation()}>
-            <div className="modal-handle-d"/>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,letterSpacing:2,color:"#00ff9d",marginBottom:16}}>📓 LOG THIS DIVE</div>
-            <div style={{background:"rgba(0,255,157,0.04)",border:"1px solid rgba(0,255,157,0.12)",borderRadius:10,padding:"12px 14px",marginBottom:14}}>
-              <div style={{fontFamily:"'Orbitron',monospace",fontSize:12,color:"#00ff9d"}}>{site.name}</div>
-              <div style={{fontSize:11,color:"rgba(0,229,204,0.5)",marginTop:4}}>{data?.wh.toFixed(1)}m · {data?.ws.toFixed(0)}km/h · {verdict?.verdict}</div>
-            </div>
-            <input value={diveLogNote} onChange={e=>setDiveLogNote(e.target.value)} placeholder="Notes (depth, species, viz estimate...)"
-              style={{width:"100%",padding:"12px",borderRadius:10,marginBottom:12,
-                background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.12)",
-                color:"#e0f7f5",fontSize:12,outline:"none"}}/>
-            <button onClick={()=>{
-              haptic(15);
-              setDiveLog(p=>[{id:Date.now(),siteId:site.id,site:site.name,verdict:verdict?.verdict,
-                wh:data?.wh.toFixed(1),ws:data?.ws.toFixed(0),
-                ts:new Date().toLocaleString("en-ZA",{dateStyle:"short",timeStyle:"short"}),
-                note:diveLogNote},...p.slice(0,29)]);
-              setDiveLogNote(""); setShowDiveLog(false);
-            }} style={{width:"100%",padding:"12px",borderRadius:10,
-              background:"rgba(0,255,157,0.1)",border:"1px solid rgba(0,255,157,0.3)",
-              color:"#00ff9d",fontSize:11,fontFamily:"'Orbitron',monospace",letterSpacing:2}}>SAVE DIVE</button>
-          </div>
-        </div>
-      )}
-
-      {/* ── COMMUNITY VIZ REPORT MODAL ── */}
-      {showVizReport && (
-        <div className="modal-overlay-d" onClick={()=>setShowVizReport(false)}>
-          <div className="modal-sheet-d" onClick={e=>e.stopPropagation()}>
-            <div className="modal-handle-d"/>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:13,letterSpacing:2,color:"#00bfff",marginBottom:16}}>👁 REPORT VISIBILITY</div>
-            <p style={{fontSize:11,color:"rgba(0,229,204,0.45)",lineHeight:1.6,marginBottom:14}}>
-              Share your actual visibility at {site.name}. Community reports are visible to all users.
-            </p>
-            <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:14}}>
-              {[1,3,5,8,12,15,20].map(v=>{
-                const col = v>=10?"#00ff9d":v>=5?"#00e5cc":v>=2?"#ffb300":"#ff4444";
-                return (
-                  <button key={v} onClick={()=>{
-                    haptic(10);
-                    setVizReports(p=>[{id:Date.now(),siteId:site.id,viz:v,vizColor:col,
-                      ts:new Date().toLocaleString("en-ZA",{dateStyle:"short",timeStyle:"short"}),
-                      note:""},...p.slice(0,49)]);
-                    setShowVizReport(false);
-                  }} style={{padding:"10px 16px",borderRadius:10,
-                    background:`${col}10`,border:`1px solid ${col}30`,
-                    color:col,fontFamily:"'Orbitron',monospace",fontSize:13}}>
-                    {v}m
-                  </button>
-                );
-              })}
-            </div>
-            <button onClick={()=>setShowVizReport(false)}
-              style={{width:"100%",padding:"12px",borderRadius:10,
-                background:"rgba(0,229,204,0.04)",border:"1px solid rgba(0,229,204,0.1)",
-                color:"rgba(0,229,204,0.4)",fontSize:11,fontFamily:"'Orbitron',monospace",letterSpacing:2}}>CANCEL</button>
-          </div>
-        </div>
-      )}
+      {/* ── DIVE BOTTOM NAV ── */}
+      <nav className="bottom-nav-dive">
+        {DIVE_TABS.map(t=>(
+          <button key={t.id} className={tab===t.id?"active":""} onClick={()=>setTab(t.id)}>
+            <span className="nav-icon">{t.id==="now"?"🤿":t.id==="forecast"?"📅":t.id==="tides"?"🌊":t.id==="sites"?"📍":t.id==="safety"?"🛟":"🧭"}</span>
+            <span className="nav-label">{t.l.toUpperCase()}</span>
+          </button>
+        ))}
+      </nav>
     </>
   );
 }
@@ -3382,8 +3006,8 @@ export default function App() {
       <style>{`
         :root {
           --app-max: min(820px, 100vw);
-          --shared-header-h: 68px;
-          --page-top: 16px;
+          --shared-header-h: 58px;
+          --page-top: 12px;
           --page-bottom: 18px;
           --section-gap: 14px;
         }
@@ -3393,37 +3017,26 @@ export default function App() {
           position:sticky; top:0; z-index:999;
           height:var(--shared-header-h);
           display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:0 16px;
-          background:rgba(2,9,16,0.94);
+          padding:0 14px;
+          background:rgba(2,9,16,0.96);
           backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
           border-bottom:1px solid rgba(255,255,255,0.05);
         }
-        .shared-brand { font-family:'Orbitron',monospace; font-size:14px; font-weight:700; letter-spacing:3px; line-height:1; color:#fff; }
-        .shared-location { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:1px; color:rgba(255,255,255,0.85); line-height:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px; }
-        .shared-sub { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:2px; }
-        .shared-badge { font-family:'JetBrains Mono',monospace; font-size:9px; letter-spacing:1px; border:1px solid; border-radius:999px; padding:2px 8px; }
-        .mode-pill { display:flex;align-items:center;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:100px;padding:3px;gap:2px;flex-shrink:0; }
-        .mode-btn { padding:5px 12px;border-radius:100px;font-family:'Orbitron',monospace;font-size:8px;letter-spacing:1px;transition:all 0.22s cubic-bezier(0.4,0,0.2,1);white-space:nowrap;border:1px solid transparent; }
-        .mode-btn.surf-active { background:rgba(0,191,255,0.14);border-color:rgba(0,191,255,0.38);color:#7dd3fc; }
-        .mode-btn.dive-active { background:rgba(0,229,204,0.14);border-color:rgba(0,229,204,0.38);color:#00e5cc; }
-        .mode-btn.inactive { color:rgba(255,255,255,0.2); }
-        .hdr-icon-btn { width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);transition:all 0.15s;flex-shrink:0; }
-        .hdr-icon-btn:active { transform:scale(0.93); }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        .spin-anim { animation:spin 0.8s linear infinite; }
+        .shared-brand { font-family:'Orbitron',monospace; font-size:13px; font-weight:700; letter-spacing:2.5px; line-height:1; color:#fff; }
+        .shared-location { font-family:'Orbitron',monospace; font-size:11px; letter-spacing:1px; color:rgba(255,255,255,0.75); line-height:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        .shared-sub { font-family:'JetBrains Mono',monospace; font-size:7px; letter-spacing:1.5px; }
+        .shared-badge { font-family:'JetBrains Mono',monospace; font-size:6.5px; letter-spacing:1px; border:1px solid; border-radius:999px; padding:2px 6px; }
+        .shared-mode-pill { flex-shrink:0; }
         .mode-scene { will-change:opacity,transform; animation:modeSwap 160ms ease; }
         @keyframes modeSwap { from { opacity:0; transform:translateY(4px); } to { opacity:1; transform:translateY(0); } }
         @media (max-width: 520px) {
-          .shared-hdr { padding:0 10px; gap:6px; }
+          .shared-hdr { padding:0 10px; }
           .shared-brand { font-size:11px; letter-spacing:2px; }
-          .shared-location { max-width:110px; font-size:10px; }
-          .mode-btn { padding:4px 8px; font-size:7px; }
+          .shared-location { font-size:10px; max-width:100px; }
+          .shared-badge { display:none; }
         }
       `}</style>
-      <SharedHeader mode={mode} setMode={setMode} meta={headerMeta}
-        onRefresh={()=>window.dispatchEvent(new CustomEvent("bc_refresh"))}
-        onSettings={()=>window.dispatchEvent(new CustomEvent("bc_settings"))}
-        isRefreshing={headerMeta?.refreshing}/>
+      <SharedHeader mode={mode} setMode={setMode} meta={headerMeta} />
       <div className="mode-scene" key={mode}>
         {mode === "surf"
           ? <WaveCheckMode setMode={setMode} hideHeader={true} setHeaderMeta={setHeaderMeta} onReady={restoreScroll} />
