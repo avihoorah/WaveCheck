@@ -94,29 +94,6 @@ const LVL_COLOR = {
   "Inter/Advanced":"#fb923c","Advanced":"#f87171","Bodyboard":"#a78bfa","All levels":"#60a5fa"
 };
 
-// ─── PUSH NOTIFICATIONS ───────────────────────────────────────────────────────
-async function requestNotificationPermission() {
-  if(!("Notification" in window)) return false;
-  const perm = await Notification.requestPermission();
-  return perm === "granted";
-}
-
-function scheduleSessionAlert(beach, bestHour, score) {
-  if(!("Notification" in window) || Notification.permission !== "granted") return;
-  const now = new Date();
-  const alertTime = new Date();
-  alertTime.setHours(bestHour - 1, 0, 0, 0);
-  const delay = alertTime - now;
-  if(delay > 0 && delay < 86400000) {
-    setTimeout(() => {
-      new Notification(`🌊 ${beach.name} is firing`, {
-        body: `Session window opens at ${String(bestHour).padStart(2,"0")}:00 — Score: ${score}/100`,
-        icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌊</text></svg>"
-      });
-    }, delay);
-  }
-}
-
 // ─── CROWD HEURISTIC ─────────────────────────────────────────────────────────
 function crowdLevel(beach, sc) {
   const day = new Date().getDay();
@@ -299,11 +276,14 @@ function WeekOutlook({hourly, beach}) {
   if(!hourly) return null;
   const now = new Date();
   const DNAMES = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
-  const days = Array.from({length:5},(_,d)=>{
+  const maxDays = Math.min(5, Math.floor((hourly.wave_height?.length??0)/24));
+  const days = Array.from({length:maxDays},(_,d)=>{
     const best = Math.max(...Array.from({length:24},(_,h)=>score(
-      hourly.wave_height?.[d*24+h]??0,hourly.wave_period?.[d*24+h]??0,
-      hourly.wind_speed_10m?.[d*24+h]??0,hourly.wind_direction_10m?.[d*24+h]??0,beach)));
-    const avgWh = Array.from({length:24},(_,h)=>hourly.wave_height?.[d*24+h]??0).reduce((a,b)=>a+b,0)/24;
+      hourly.wave_height?.[Math.min(d*24+h, (hourly.wave_height?.length??1)-1)]??0,
+      hourly.wave_period?.[Math.min(d*24+h, (hourly.wave_period?.length??1)-1)]??0,
+      hourly.wind_speed_10m?.[Math.min(d*24+h, (hourly.wind_speed_10m?.length??1)-1)]??0,
+      hourly.wind_direction_10m?.[Math.min(d*24+h, (hourly.wind_direction_10m?.length??1)-1)]??0,beach)));
+    const avgWh = Array.from({length:24},(_,h)=>hourly.wave_height?.[Math.min(d*24+h,(hourly.wave_height?.length??1)-1)]??0).reduce((a,b)=>a+b,0)/24;
     return{d,best,avgWh};
   });
   return (
@@ -384,11 +364,65 @@ function diveVerdict(wh, ws, sp, tl) {
   return { verdict:"NO-GO", color:"#ff4444", icon:"🚫", sub:"Conditions likely to reduce visibility and safety." };
 }
 
-function visibilityEstimate(wh, sp) {
-  if (wh < 0.4) return { est:"10–15m", color:"#00ff9d" };
-  if (wh < 0.8 && sp < 10) return { est:"6–10m", color:"#00e5cc" };
-  if (wh < 1.2) return { est:"3–6m", color:"#ffb300" };
-  return { est:"<3m", color:"#ff4444" };
+// ─── IMPROVED VISIBILITY MODEL ───────────────────────────────────────────────
+// Factors: swell height, period, wind speed, swell direction vs site exposure,
+// time of day (morning better before afternoon wind), season (summer SE clearer).
+// TODO: COPERNICUS HOOK — when KD490 satellite data is available via Vercel edge
+// function, replace baseViz calculation with: baseViz = kd490ToVisibility(kd490Value)
+// and use the model below only as fallback.
+function visibilityEstimate(wh, ws, sp, waveDir, site, hourOfDay, monthIndex) {
+  // Base visibility from swell height (primary degrader)
+  let baseViz = wh < 0.3 ? 14
+              : wh < 0.5 ? 11
+              : wh < 0.8 ? 8
+              : wh < 1.1 ? 5
+              : wh < 1.5 ? 3
+              : 1.5;
+
+  // Swell period modifier: long-period groundswell penetrates deeper but
+  // short choppy wind-swell stirs up more surface sediment
+  if (sp < 7 && wh > 0.4) baseViz *= 0.75;
+  else if (sp >= 12) baseViz *= 1.1; // groundswell cleaner than wind swell
+
+  // Wind modifier: onshore wind creates surface chop + sediment suspension
+  if (ws > 25) baseViz *= 0.6;
+  else if (ws > 15) baseViz *= 0.8;
+  else if (ws < 8) baseViz *= 1.1; // calm = clearer
+
+  // Swell direction vs site exposure
+  // Atlantic sites exposed to NW-SW swells; False Bay exposed to SE swells
+  if (site) {
+    const swellDeg = waveDir ?? 180;
+    const isAtlantic = site.side === "Atlantic";
+    const isFalseBay = site.side === "False Bay";
+    // NW swell (270-340°) hitting Atlantic sites = bad viz (oncoming fetch)
+    if (isAtlantic && swellDeg >= 270 && swellDeg <= 340 && wh > 0.5) baseViz *= 0.75;
+    // SE swell (100-160°) hitting False Bay = bad viz
+    if (isFalseBay && swellDeg >= 100 && swellDeg <= 160 && wh > 0.5) baseViz *= 0.75;
+    // Kelp sites (Oudekraal, Llandudno) have naturally lower viz baseline
+    if (site.kelp && wh > 0.6) baseViz *= 0.85;
+  }
+
+  // Time of day: morning (before 10am) typically clearer before afternoon wind
+  if (hourOfDay !== undefined) {
+    if (hourOfDay >= 6 && hourOfDay <= 9) baseViz *= 1.1;   // morning bonus
+    if (hourOfDay >= 14) baseViz *= 0.9; // afternoon wind degradation
+  }
+
+  // Seasonal baseline: False Bay summer (Dec-Feb) naturally clearer due to SE winds
+  // pushing surface water offshore, upwelling brings clearer cold water up
+  if (monthIndex !== undefined && site?.side === "False Bay") {
+    if (monthIndex >= 11 || monthIndex <= 1) baseViz *= 1.15; // Dec-Feb
+    if (monthIndex >= 5 && monthIndex <= 7) baseViz *= 0.85;  // Jun-Aug (winter swell season)
+  }
+
+  const viz = Math.max(1, Math.min(20, baseViz));
+
+  if (viz >= 10) return { est:`${Math.round(viz)}–${Math.round(viz)+5}m`, color:"#00ff9d", quality:"Excellent" };
+  if (viz >= 7)  return { est:`${Math.round(viz)}–${Math.round(viz)+3}m`, color:"#00e5cc", quality:"Good" };
+  if (viz >= 4)  return { est:`${Math.round(viz)}–${Math.round(viz)+2}m`, color:"#ffb300", quality:"Fair" };
+  if (viz >= 2)  return { est:`${Math.round(viz)}–${Math.round(viz)+1}m`, color:"#ff8800", quality:"Poor" };
+  return { est:"<2m", color:"#ff4444", quality:"Very poor" };
 }
 
 function currentStrength(wh, tl, ts) {
@@ -456,10 +490,17 @@ const SITES = [
   { id:"paternoster",  name:"Paternoster Reef",     lat:-32.7900, lon:17.8900, side:"West Coast",
     mpa:false, entryType:"Shore/Boat", maxDepth:15, char:"West Coast gem. Crayfish country. Cold but crystal clear on good days.",
     species:["Crayfish","Perlemoen (MPA)","Geelbek","Roman"], bestTide:"Slack high" },
+  // PENINSULA
+  { id:"cape_point",   name:"Cape Point Pinnacles",  lat:-34.3500, lon:18.4800, side:"Peninsula",
+    mpa:true,  entryType:"Boat — charter", maxDepth:30, char:"Remote, spectacular. Two Oceans convergence zone. Exceptional diversity. Boat only, exposed — weather-dependent.",
+    species:["Blue shark","Yellowtail","Giant kob","Cape fur seal","Sunfish"], bestTide:"Slack" },
+  { id:"smitswinkel",  name:"Smitswinkel Bay",        lat:-34.2400, lon:18.4750, side:"False Bay",
+    mpa:false, entryType:"Shore — rocky ledge", maxDepth:25, char:"4 wrecks in one bay. Superb macro. Sheltered from SE. One of Cape Town's best dives.",
+    species:["Octopus","Nudibranchs","Pipefish","Moray eel","Crayfish"], bestTide:"Any — sheltered" },
 ];
 
 const MPA_SITES = SITES.filter(s => s.mpa).map(s => s.id);
-const DIVE_SIDES = ["All", "False Bay", "Atlantic", "West Coast"];
+const DIVE_SIDES = ["All", "False Bay", "Atlantic", "West Coast", "Peninsula"];
 const DIVE_TABS = [
   {id:"now",      l:"Now"},
   {id:"forecast", l:"Forecast"},
@@ -606,8 +647,6 @@ function WaveCheckMode({ setMode }) {
   const [filter, setFilter] = useState("All");
   const [lastRef, setLastRef] = useState(null);
   const [now, setNow] = useState(new Date());
-  const [notifEnabled, setNotifEnabled] = useState(false);
-  const [notifGranted, setNotifGranted] = useState(false);
   const [showBeachPicker, setShowBeachPicker] = useState(false);
   const [allScores, setAllScores] = useState([]);
   const [detailExpanded, setDetailExpanded] = useState(false);
@@ -657,7 +696,9 @@ function WaveCheckMode({ setMode }) {
       setData({wh:m.current?.wave_height??m.hourly?.wave_height?.[cHr]??0,sp:m.current?.wave_period??m.hourly?.wave_period?.[cHr]??0,waveDir:m.current?.wave_direction??m.hourly?.wave_direction?.[cHr]??0,ws,wd,tmp,cld,rain,uv,tl,ts,tides:tc,wt,suit:wetsuit(wt,ws),bst,ben,bsc,sc:currentSc});
       setLastRef(new Date());
       setNow(new Date());
-      // fetch lightweight scores for all beaches using current hour data
+      // Score all beaches using current wave/wind data.
+      // Note: all beaches share same wave height (open ocean swell) but wind
+      // state (offshore/onshore) is correctly computed per beach's good-wind list.
       const scores = BEACHES.map(bch => ({
         beach: bch,
         sc: score(m.hourly?.wave_height?.[cHr]??0,m.hourly?.wave_period?.[cHr]??0,ws,wd,bch)
@@ -673,9 +714,14 @@ function WaveCheckMode({ setMode }) {
 
   useEffect(()=>{fetchData(beach);},[beach,fetchData]);
   useEffect(()=>{
-    const t=setInterval(()=>fetchData(beach,true),60000);
+    const t=setInterval(()=>fetchData(beach,true),300000);
     return ()=>clearInterval(t);
   },[beach,fetchData]);
+  // Clock tick for "last updated" display
+  useEffect(()=>{
+    const t=setInterval(()=>setNow(new Date()),30000);
+    return ()=>clearInterval(t);
+  },[]);
 
   useEffect(()=>{
     let m=document.querySelector('meta[name="viewport"]');
@@ -685,19 +731,6 @@ function WaveCheckMode({ setMode }) {
     document.body.style.overflowX='hidden';
     document.body.style.width='100%';
   },[]);
-
-  const handleNotifToggle = async () => {
-    if(notifGranted) {
-      setNotifEnabled(p=>!p);
-      return;
-    }
-    const granted = await requestNotificationPermission();
-    setNotifGranted(granted);
-    if(granted) {
-      setNotifEnabled(true);
-      if(data) scheduleSessionAlert(beach, data.bst, data.bsc);
-    }
-  };
 
   const wc = data ? deg2c(data.wd) : "—";
   const wvc = data ? deg2c(data.waveDir) : "—";
@@ -784,13 +817,13 @@ function WaveCheckMode({ setMode }) {
           margin-bottom:14px;
         }
         .tab-btn {
-          flex:1; padding:7px 0;
+          flex:1; padding:6px 2px;
           border-radius:7px;
           font-family:'Bebas Neue',sans-serif;
-          font-size:12px; letter-spacing:1px;
+          font-size:clamp(9px,2.5vw,12px); letter-spacing:0.5px;
           color:rgba(255,255,255,0.28);
           transition:all 0.18s; text-align:center;
-          white-space:nowrap; overflow:hidden;
+          white-space:nowrap; overflow:hidden; min-width:0;
         }
         .tab-btn.active {
           background:linear-gradient(135deg, rgba(0,191,255,0.18) 0%, rgba(0,110,220,0.1) 100%);
@@ -910,20 +943,12 @@ function WaveCheckMode({ setMode }) {
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:10,flexShrink:0}}>
-            {refreshing && <span className="shimmer" style={{fontSize:7,color:"#7dd3fc",letterSpacing:2}}>SYNCING</span>}
-            <button onClick={handleNotifToggle}
-              style={{padding:"5px 10px",borderRadius:20,fontSize:8,letterSpacing:2,
-                background:notifEnabled?"rgba(0,255,135,0.1)":"rgba(255,255,255,0.05)",
-                border:`1px solid ${notifEnabled?"rgba(0,255,135,0.3)":"rgba(255,255,255,0.1)"}`,
-                color:notifEnabled?"#00ff87":"rgba(255,255,255,0.35)",transition:"all 0.2s"}}>
-              {notifEnabled?"🔔 ON":"🔔 ALERTS"}
-            </button>
-            <div style={{textAlign:"right"}}>
+            {refreshing && <span className="shimmer" style={{fontSize:7,color:"#7dd3fc",letterSpacing:2}}>SYNCING</span>}            <div style={{textAlign:"right"}}>
               <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:15,color:"rgba(255,255,255,0.55)",letterSpacing:1}}>
                 {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
               </div>
               {lastRef && <div style={{fontSize:6.5,color:"rgba(255,255,255,0.18)",letterSpacing:1}}>
-                ↻ {lastRef.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
+                ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}
               </div>}
             </div>
           </div>
@@ -1433,7 +1458,7 @@ function WaveCheckMode({ setMode }) {
                   ))}
                 </div>
                 <div style={{fontSize:7,color:"rgba(255,255,255,0.1)",letterSpacing:1}}>
-                  {beach.lat}°S · {Math.abs(beach.lon)}°E · Auto-refresh 60s · Tides indicative only
+                  {beach.lat}°S · {Math.abs(beach.lon)}°E · Auto-refresh 5min · Tides: harmonic model (indicative)
                 </div>
               </div>
 
@@ -1497,7 +1522,22 @@ function DiveCheckMode({ setMode }) {
         wind_direction_10m: [...(w.hourly?.wind_direction_10m ?? [])],
       };
       setHourly(h48);
-      setData({ wh, sp, wdir, ws, wd, wg, tmp, tl, ts, tides:tc, wt, wc:deg2c(wd), wvc:deg2c(wdir) });
+      // Calculate best dive window (next 24h)
+      let bestDiveScore = -1, bestDiveHour = cHr, bestDiveEnd = Math.min(cHr+2, 47);
+      for (let i = cHr; i < Math.min(cHr+23, 46); i++) {
+        const hwh = h48.wave_height?.[i] ?? 0;
+        const hws = h48.wind_speed_10m?.[i] ?? 0;
+        const hsp = h48.wave_period?.[i] ?? 0;
+        const htc = tc[i]?.h ?? 0.82;
+        const hts = htc > (tc[Math.min(i+1,47)]?.h ?? htc) + 0.02 ? "Falling" : "Rising";
+        const dv = diveVerdict(hwh, hws, hsp, htc);
+        // Score: GO=3, CAUTION=1, NO-GO=0; bonus for slack tide, morning hours
+        let ds = dv.verdict==="GO" ? 3 : dv.verdict==="CAUTION" ? 1 : 0;
+        if (Math.abs(htc - (tc[Math.min(i+1,47)]?.h ?? htc)) < 0.05) ds += 1; // slack tide bonus
+        if (i >= 6 && i <= 10) ds += 1; // morning bonus
+        if (ds > bestDiveScore) { bestDiveScore = ds; bestDiveHour = i; bestDiveEnd = Math.min(i+2, 47); }
+      }
+      setData({ wh, sp, wdir, ws, wd, wg, tmp, tl, ts, tides:tc, wt, wc:deg2c(wd), wvc:deg2c(wdir), bestDiveHour, bestDiveEnd, bestDiveScore });
       setLastRef(new Date());
       setNow(new Date());
     } catch {
@@ -1510,9 +1550,13 @@ function DiveCheckMode({ setMode }) {
 
   useEffect(()=>{fetchData(site);},[site,fetchData]);
   useEffect(()=>{
-    const t=setInterval(()=>fetchData(site,true),60000);
+    const t=setInterval(()=>fetchData(site,true),300000);
     return ()=>clearInterval(t);
   },[site,fetchData]);
+  useEffect(()=>{
+    const t=setInterval(()=>setNow(new Date()),30000);
+    return ()=>clearInterval(t);
+  },[]);
   useEffect(()=>{
     let m=document.querySelector('meta[name="viewport"]');
     if(!m){m=document.createElement('meta');m.name='viewport';document.head.appendChild(m);}
@@ -1522,7 +1566,7 @@ function DiveCheckMode({ setMode }) {
   },[]);
 
   const verdict = data ? diveVerdict(data.wh, data.ws, data.sp, data.tl) : null;
-  const vis     = data ? visibilityEstimate(data.wh, data.sp) : null;
+  const vis     = data ? visibilityEstimate(data.wh, data.ws, data.sp, data.wdir, site, hr, new Date().getMonth()) : null;
   const current = data ? currentStrength(data.wh, data.tl, data.ts) : null;
   const suit    = data ? diveWetsuit(data.wt) : null;
 
@@ -1703,7 +1747,7 @@ function DiveCheckMode({ setMode }) {
                 {now.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
               </div>
               {lastRef && <div style={{fontSize:6.5,color:"rgba(0,229,204,0.2)",letterSpacing:1}}>
-                ↻ {lastRef.toLocaleTimeString("en-ZA",{hour:"2-digit",minute:"2-digit"})}
+                ↻ {Math.floor((now-lastRef)/60000)<1?"just now":Math.floor((now-lastRef)/60000)+"m ago"}
               </div>}
             </div>
           </div>
@@ -2284,7 +2328,7 @@ function DiveCheckMode({ setMode }) {
                   ))}
                 </div>
                 <div style={{fontSize:7,color:"rgba(0,229,204,0.12)",letterSpacing:1}}>
-                  {site.lat}°S · {Math.abs(site.lon)}°E · Auto-refresh 60s · Conditions indicative only · Always dive with a buddy
+                  {site.lat}°S · {Math.abs(site.lon)}°E · Auto-refresh 5min · Conditions indicative only · Always dive with a buddy
                 </div>
               </div>
 
