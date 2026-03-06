@@ -292,18 +292,18 @@ function WeekOutlook({hourly, beach}) {
         const r = rating(d.best);
         const lbl = i===0?"Today":i===1?"Tmrw":DNAMES[(now.getDay()+i)%7];
         return (
-          <div key={i} style={{flex:"1 1 0",minWidth:0,background:i===0?"rgba(0,191,255,0.06)":"rgba(255,255,255,0.02)",
-            border:`1px solid ${i===0?"rgba(0,191,255,0.25)":"rgba(255,255,255,0.06)"}`,
-            borderRadius:10,padding:"12px 6px",textAlign:"center"}}>
-            <div style={{fontSize:8,color:i===0?"#7dd3fc":"rgba(255,255,255,0.3)",marginBottom:7,letterSpacing:1}}>
+          <div key={i} style={{flex:"1 1 0",minWidth:0,background:i===0?"rgba(0,191,255,0.07)":"rgba(255,255,255,0.02)",
+            border:`1px solid ${i===0?"rgba(0,191,255,0.28)":"rgba(255,255,255,0.06)"}`,
+            borderRadius:10,padding:"12px 5px",textAlign:"center"}}>
+            <div style={{fontFamily:"'Orbitron',monospace",fontSize:7.5,color:i===0?"#7dd3fc":"rgba(255,255,255,0.3)",marginBottom:6,letterSpacing:0.5}}>
               {lbl.toUpperCase()}
             </div>
-            <div style={{fontSize:18,marginBottom:4}}>{r.e}</div>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:11,color:r.c,letterSpacing:1}}>
+            <div style={{fontSize:20,marginBottom:5}}>{r.e}</div>
+            <div style={{fontFamily:"'Orbitron',monospace",fontSize:10,color:r.c,letterSpacing:0.5,marginBottom:3}}>
               {r.l.toUpperCase()}
             </div>
-            <div style={{fontSize:8,color:"rgba(255,255,255,0.2)",marginTop:3}}>
-              {d.avgWh.toFixed(1)}m avg
+            <div style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:"rgba(255,255,255,0.25)"}}>
+              {d.avgWh.toFixed(1)}m
             </div>
           </div>
         );
@@ -322,20 +322,23 @@ function AllBeachesOverview({allScores, onSelect, currentId}) {
         const isActive = beach.id === currentId;
         return (
           <button key={beach.id} onClick={()=>onSelect(beach)}
-            style={{display:"flex",alignItems:"center",gap:12,background:isActive?"rgba(0,191,255,0.07)":"rgba(255,255,255,0.02)",
+            style={{display:"flex",alignItems:"center",gap:10,background:isActive?"rgba(0,191,255,0.07)":"rgba(255,255,255,0.02)",
               border:`1px solid ${isActive?"rgba(0,191,255,0.3)":"rgba(255,255,255,0.05)"}`,
-              borderRadius:10,padding:"10px 14px",textAlign:"left",width:"100%",cursor:"pointer",
+              borderRadius:10,padding:"9px 12px",textAlign:"left",width:"100%",cursor:"pointer",
               transition:"all 0.15s"}}>
-            <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,color:r.c,width:24,textAlign:"center",flexShrink:0}}>{sc}</div>
+            <div style={{fontFamily:"'Orbitron',monospace",fontSize:16,color:r.c,width:26,textAlign:"center",flexShrink:0,lineHeight:1}}>{sc}</div>
             <div style={{flex:1,minWidth:0}}>
-              <div style={{fontSize:11,color:isActive?"#7dd3fc":"rgba(255,255,255,0.7)",fontFamily:"'Orbitron',monospace",letterSpacing:1,marginBottom:2}}>
-                {beach.name}
+              <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                <div style={{fontSize:10,color:isActive?"#7dd3fc":"rgba(255,255,255,0.7)",fontFamily:"'Orbitron',monospace",letterSpacing:0.5,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                  {beach.name}
+                </div>
+                {wh !== undefined && <span style={{fontSize:7,color:"rgba(255,255,255,0.3)",flexShrink:0}}>{wh.toFixed(1)}m</span>}
               </div>
               <MiniBar value={sc} max={100} color={r.c}/>
             </div>
             <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3,flexShrink:0}}>
-              <span style={{fontSize:12}}>{r.e}</span>
-              <span style={{fontSize:7,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1}}>{beach.level.toUpperCase()}</span>
+              <span style={{fontSize:11}}>{r.e}</span>
+              <span style={{fontSize:6.5,color:LVL_COLOR[beach.level]??"#888",letterSpacing:0.5}}>{beach.level.toUpperCase()}</span>
             </div>
           </button>
         );
@@ -692,13 +695,28 @@ function WaveCheckMode({ setMode }) {
       setData({wh:m.current?.wave_height??m.hourly?.wave_height?.[cHr]??0,sp:m.current?.wave_period??m.hourly?.wave_period?.[cHr]??0,waveDir:m.current?.wave_direction??m.hourly?.wave_direction?.[cHr]??0,ws,wd,tmp,cld,rain,uv,tl,ts,tides:tc,wt,suit:wetsuit(wt,ws),bst,ben,bsc,sc:currentSc});
       setLastRef(new Date());
       setNow(new Date());
-      // Score all beaches using current wave/wind data.
-      // Note: all beaches share same wave height (open ocean swell) but wind
-      // state (offshore/onshore) is correctly computed per beach's good-wind list.
-      const scores = BEACHES.map(bch => ({
-        beach: bch,
-        sc: score(m.hourly?.wave_height?.[cHr]??0,m.hourly?.wave_period?.[cHr]??0,ws,wd,bch)
-      }));
+      // Fetch per-side marine data for accurate beach scoring.
+      // Atlantic & False Bay have genuinely different swell exposure.
+      // We use 2 representative coords + the already-fetched selected beach.
+      const ATLANTIC_COORD = { lat:-33.95, lon:18.37 };   // Camps Bay offshore
+      const FALSEBAY_COORD = { lat:-34.12, lon:18.46 };   // Muizenberg offshore
+      const needAtlantic = b.side !== "Atlantic";
+      const needFalseBay = b.side !== "False Bay";
+      const [atl, fb] = await Promise.all([
+        needAtlantic ? fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${ATLANTIC_COORD.lat}&longitude=${ATLANTIC_COORD.lon}&current=wave_height,wave_period,wave_direction&hourly=wind_speed_10m,wind_direction_10m&timezone=Africa%2FJohannesburg&forecast_days=1`).then(r=>r.json()).catch(()=>null) : null,
+        needFalseBay ? fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${FALSEBAY_COORD.lat}&longitude=${FALSEBAY_COORD.lon}&current=wave_height,wave_period,wave_direction&timezone=Africa%2FJohannesburg&forecast_days=1`).then(r=>r.json()).catch(()=>null) : null,
+      ]);
+      const atlWh  = needAtlantic ? (atl?.current?.wave_height??m.current?.wave_height??0) : (m.current?.wave_height??0);
+      const atlSp  = needAtlantic ? (atl?.current?.wave_period??m.current?.wave_period??0) : (m.current?.wave_period??0);
+      const fbWh   = needFalseBay ? (fb?.current?.wave_height??m.current?.wave_height??0) : (m.current?.wave_height??0);
+      const fbSp   = needFalseBay ? (fb?.current?.wave_period??m.current?.wave_period??0) : (m.current?.wave_period??0);
+      const scores = BEACHES.map(bch => {
+        const isAtlantic = bch.side === "Atlantic";
+        const isFalseBay = bch.side === "False Bay";
+        const bWh = isAtlantic ? atlWh : isFalseBay ? fbWh : m.current?.wave_height??0;
+        const bSp = isAtlantic ? atlSp : isFalseBay ? fbSp : m.current?.wave_period??0;
+        return { beach: bch, sc: score(bWh, bSp, ws, wd, bch), wh: bWh };
+      });
       setAllScores(scores);
     } catch {
       if(!silent) setErr("Couldn't load conditions. Check connection.");
@@ -758,6 +776,13 @@ function WaveCheckMode({ setMode }) {
         @keyframes badgePop { from{opacity:0;transform:scale(0.8) translateY(-3px)} to{opacity:1;transform:scale(1) translateY(0)} }
 
         .rise { animation:rise 0.35s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+        /* ── SKELETON ── */
+        @keyframes skeletonPulse { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
+        .sk { background:rgba(255,255,255,0.04); border-radius:8px; animation:skeletonPulse 1.6s ease-in-out infinite; }
+        .sk-line { height:10px; border-radius:4px; }
+        .sk-hero { height:140px; border-radius:16px; }
+        .sk-card { height:80px; border-radius:12px; }
         .pulse { animation:pulse 2.5s ease-in-out infinite; }
         .shimmer { animation:shimmer 1.5s ease-in-out infinite; }
 
@@ -1087,7 +1112,11 @@ function WaveCheckMode({ setMode }) {
                 const r = rating(data.sc);
                 const wst2 = windState(beach,wc);
                 const sq = swellQuality(data.sp);
-                const isDawnPatrol = data.bst >= 5 && data.bst <= 8;
+                // Sunrise in Cape Town: ~05:00 in Dec, ~07:15 in Jun
+                // Approximate: sunrise = 6 + 1.25 * sin((month-6)/12 * 2π)
+                const _mo = new Date().getMonth();
+                const sunriseHr = Math.round(6 + 1.25 * Math.sin((_mo - 5) / 12 * 2 * Math.PI));
+                const isDawnPatrol = data.bst >= sunriseHr && data.bst <= sunriseHr + 2;
                 let dec, emoji, color, reason;
                 const goCount = [wst2.s!=="Onshore",data.tl>0.6&&data.tl<1.7,data.wh>=beach.iw[0]*.7&&data.wh<=beach.iw[1]*1.3,data.ws<28].filter(Boolean).length;
                 if(goCount>=3&&data.sc>=55){dec="PADDLE OUT";emoji="🤙";color="#00ff87";reason="Conditions are firing.";}
@@ -1174,15 +1203,15 @@ function WaveCheckMode({ setMode }) {
                         ].map((p,i)=>(
                           <div key={i} style={{display:"flex",alignItems:"center",gap:5,
                             background:`${p.c}0e`,border:`1px solid ${p.c}28`,
-                            borderRadius:20,padding:"4px 10px"}}>
-                            <span style={{fontSize:10}}>{p.icon}</span>
-                            <span style={{fontSize:8.5,color:p.c,letterSpacing:0.5}}>{p.l}</span>
+                            borderRadius:20,padding:"5px 11px",height:28,boxSizing:"border-box"}}>
+                            <span style={{fontSize:10,lineHeight:1}}>{p.icon}</span>
+                            <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:8,color:p.c,letterSpacing:0.3,whiteSpace:"nowrap"}}>{p.l}</span>
                           </div>
                         ))}
                       </div>
                     </div>
 
-                    {/* BEST SESSION */}
+                    {/* BEST SESSION + SHARE */}
                     <div style={{display:"flex",gap:7}}>
                       <div style={{flex:1,background:"rgba(0,191,255,0.04)",
                         border:"1px solid rgba(0,191,255,0.15)",borderRadius:11,padding:"12px 14px"}}>
@@ -1209,14 +1238,29 @@ function WaveCheckMode({ setMode }) {
                       </div>
                     </div>
 
+                    {/* SHARE CONDITIONS */}
+                    <button onClick={()=>{
+                      const txt = `🌊 ${beach.name} — Score ${data.sc}/100\n${dec}\n${data.wh.toFixed(1)}m · ${data.sp.toFixed(0)}s · ${wc} ${data.ws.toFixed(0)}km/h\ncheck-eosin.vercel.app`;
+                      if(navigator.share){navigator.share({title:`${beach.name} conditions`,text:txt});}
+                      else{navigator.clipboard?.writeText(txt).then(()=>alert("Copied to clipboard!"));}
+                    }} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
+                        padding:"9px",borderRadius:10,
+                        background:"rgba(0,191,255,0.04)",border:"1px solid rgba(0,191,255,0.12)",
+                        color:"rgba(0,191,255,0.5)",fontSize:8,letterSpacing:2,width:"100%",
+                        fontFamily:"'Orbitron',monospace",transition:"all 0.15s"}}>
+                      📤 SHARE CONDITIONS
+                    </button>
+
                     {/* EXPAND DETAIL TOGGLE */}
                     <button onClick={()=>setDetailExpanded(p=>!p)}
-                      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:6,
-                        padding:"9px",borderRadius:10,
-                        background:"rgba(255,255,255,0.025)",border:"1px solid rgba(255,255,255,0.06)",
-                        color:"rgba(255,255,255,0.35)",fontSize:9,letterSpacing:2,width:"100%",
-                        transition:"all 0.15s"}}>
-                      {detailExpanded?"▲ LESS DETAIL":"▼ MORE DETAIL"}
+                      style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,
+                        padding:"10px",borderRadius:10,
+                        background:detailExpanded?"rgba(0,191,255,0.06)":"rgba(255,255,255,0.02)",
+                        border:`1px solid ${detailExpanded?"rgba(0,191,255,0.2)":"rgba(255,255,255,0.06)"}`,
+                        color:detailExpanded?"rgba(0,191,255,0.7)":"rgba(255,255,255,0.3)",
+                        fontSize:8,letterSpacing:2,width:"100%",transition:"all 0.2s",fontFamily:"'Orbitron',monospace"}}>
+                      <span style={{transition:"transform 0.2s",display:"inline-block",transform:detailExpanded?"rotate(180deg)":"rotate(0deg)",fontSize:10}}>⌄</span>
+                      {detailExpanded?"LESS DETAIL":"MORE DETAIL"}
                     </button>
 
                     {detailExpanded && (
@@ -1225,7 +1269,7 @@ function WaveCheckMode({ setMode }) {
                           {[
                             {icon:"🌊",label:"Wave Height",value:`${data.wh.toFixed(1)}m`,sub:data.wh>=beach.iw[0]&&data.wh<=beach.iw[1]?"✓ Ideal range":`Ideal ${beach.iw[0]}–${beach.iw[1]}m`,hi:data.wh>=beach.iw[0]&&data.wh<=beach.iw[1]},
                             {icon:"⏱",label:"Swell Period",value:`${data.sp.toFixed(0)}s`,sub:data.sp>=12?"Long — quality swell":data.sp>=8?"Medium period":"Short — bumpy"},
-                            {icon:"🌡",label:"Water Temp",value:`${data.wt}°C`,sub:liveSst?"Live SST ✓":"Seasonal avg",hi:!!liveSst},
+                            {icon:"🌡",label:"Water Temp",value:`${data.wt}°C`,sub:liveSst?"🛰 Live SST":"📅 Seasonal avg — not live",hi:!!liveSst},
                             {icon:"🌤",label:"Air Temp",value:`${data.tmp.toFixed(0)}°C`,sub:`Cloud ${data.cld}%`},
                             {icon:"🔆",label:"UV Index",value:`${data.uv?.toFixed(0)??"-"}`,sub:data.uv>=8?"Very high 🔥":data.uv>=5?"Moderate":"Low UV"},
                             {icon:"🌧",label:"Rain Chance",value:`${data.rain}%`,sub:data.rain>60?"Pack a towel":"Likely dry"},
@@ -1460,12 +1504,14 @@ function WaveCheckMode({ setMode }) {
                       {item:"Rain jacket", icon:"🌧", show:data.rain>60},
                       {item:"Towel + warm layers", icon:"🏖️", show:true},
                       {item:"Water bottle", icon:"💧", show:true},
-                      {item:"Check sharkspotters.org.za", icon:"🦈", show:SHARK.includes(beach.id)},
+                      {item:"sharkspotters.org.za — check flag status", icon:"🦈", show:SHARK.includes(beach.id), link:"https://sharkspotters.org.za"},
                     ].filter(g=>g.show).map((g,i,arr)=>(
                       <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",
                         borderBottom:i<arr.length-1?"1px solid rgba(255,255,255,0.04)":"none"}}>
                         <span style={{fontSize:15,flexShrink:0,width:22,textAlign:"center"}}>{g.icon}</span>
-                        <span style={{fontSize:10.5,color:"rgba(255,255,255,0.55)",flex:1}}>{g.item}</span>
+                        {g.link
+                          ? <a href={g.link} target="_blank" rel="noopener noreferrer" style={{fontSize:10,color:"#7dd3fc",flex:1,textDecoration:"none"}}>{g.item} ↗</a>
+                          : <span style={{fontSize:10,color:"rgba(255,255,255,0.5)",flex:1}}>{g.item}</span>}
                         <span style={{color:"#4ade80",fontSize:11,flexShrink:0}}>✓</span>
                       </div>
                     ))}
@@ -1476,9 +1522,9 @@ function WaveCheckMode({ setMode }) {
               {/* FOOTER */}
               <div style={{marginTop:18,padding:"10px 14px",borderTop:"1px solid rgba(255,255,255,0.05)"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:5}}>
-                  {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"Copernicus SST ✓":"Seasonal model"),"TIDES: Harmonic","UV: Open-Meteo"].map(s=>(
-                    <span key={s} style={{fontSize:7.5,color:"#4ade80",background:"rgba(74,222,128,0.05)",
-                      border:"1px solid rgba(74,222,128,0.1)",borderRadius:4,padding:"2px 7px",letterSpacing:0.5}}>{s}</span>
+                  {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"🛰 Copernicus SST":"📅 Seasonal"),"TIDES: Harmonic","UV: Open-Meteo"].map(s=>(
+                    <span key={s} style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"rgba(0,191,255,0.6)",background:"rgba(0,191,255,0.05)",
+                      border:"1px solid rgba(0,191,255,0.1)",borderRadius:4,padding:"2px 7px",letterSpacing:0.3}}>{s}</span>
                   ))}
                 </div>
                 <div style={{fontSize:7,color:"rgba(255,255,255,0.1)",letterSpacing:1}}>
@@ -1624,6 +1670,11 @@ function DiveCheckMode({ setMode }) {
         @keyframes verdictPop { from{opacity:0;transform:scale(0.92)} to{opacity:1;transform:scale(1)} }
 
         .rise    { animation:rise 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
+
+        @keyframes skeletonPulse { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
+        .sk { background:rgba(0,229,204,0.06); border-radius:8px; animation:skeletonPulse 1.6s ease-in-out infinite; }
+        .sk-hero { height:180px; border-radius:16px; }
+        .sk-card { height:80px; border-radius:12px; }
         .shimmer { animation:shimmer 1.6s ease-in-out infinite; }
         .bubble { position:fixed; border-radius:50%; background:rgba(0,229,204,0.1); pointer-events:none; animation:bubbleUp 7s ease-in infinite; }
 
@@ -1855,9 +1906,16 @@ function DiveCheckMode({ setMode }) {
 
           {/* ── LOADING ── */}
           {loading && (
-            <div style={{textAlign:"center",padding:"60px 0",color:"rgba(0,229,204,0.25)"}}>
-              <div style={{fontSize:36,display:"inline-block",animation:"spin 1.8s linear infinite",marginBottom:14}}>🤿</div>
-              <div style={{fontSize:9,letterSpacing:4,fontFamily:"'Orbitron',monospace"}}>READING THE DEEP…</div>
+            <div style={{display:"flex",flexDirection:"column",gap:9,padding:"4px 0"}}>
+              <div className="sk sk-hero"/>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                <div className="sk sk-card"/>
+                <div className="sk sk-card"/>
+              </div>
+              <div className="sk" style={{height:80,borderRadius:12}}/>
+              <div style={{display:"flex",gap:6}}>
+                {[1,2,3].map(i=><div key={i} className="sk" style={{flex:1,height:28,borderRadius:20}}/>)}
+              </div>
             </div>
           )}
           {err && (
@@ -1933,7 +1991,7 @@ function DiveCheckMode({ setMode }) {
                     {/* Condition pills */}
                     <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                       {[
-                        {l:`~${vis.est} viz`, icon:"👁", c:vis.color},
+                        {l:`${vis.est} viz`, icon:"👁", c:vis.color},
                         {l:current.level+" current", icon:"🌀", c:current.color},
                         {l:`${data.wc} ${data.ws.toFixed(0)}km/h`, icon:"💨", c:data.ws<15?"#00ff9d":data.ws<25?"#ffb300":"#ff4444"},
                         {l:data.ts, icon:"🌊", c:"#00e5cc"},
@@ -2355,11 +2413,10 @@ function DiveCheckMode({ setMode }) {
               {/* FOOTER */}
               <div style={{marginTop:18,padding:"10px 14px",borderTop:"1px solid rgba(0,229,204,0.06)"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:5}}>
-                  {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"Live SST ✓":"Seasonal model"),"TIDES: Harmonic",
-                    "VIZ: "+(satelliteViz?"🛰 Copernicus KD490 ✓":"Swell model")].map(s=>(
-                    <span key={s} style={{fontSize:7.5,color:"#00e5cc",background:"rgba(0,229,204,0.04)",
-                      border:"1px solid rgba(0,229,204,0.1)",borderRadius:4,padding:"2px 7px",letterSpacing:0.5,
-                      fontFamily:"'Orbitron',monospace",fontSize:6.5}}>{s}</span>
+                  {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"🛰 Live SST":"📅 Seasonal"),"TIDES: Harmonic",
+                    "VIZ: "+(satelliteViz?"🛰 Copernicus KD490":"Swell model")].map(s=>(
+                    <span key={s} style={{fontFamily:"'JetBrains Mono',monospace",fontSize:7,color:"rgba(0,229,204,0.6)",background:"rgba(0,229,204,0.04)",
+                      border:"1px solid rgba(0,229,204,0.1)",borderRadius:4,padding:"2px 7px",letterSpacing:0.3}}>{s}</span>
                   ))}
                 </div>
                 <div style={{fontSize:7,color:"rgba(0,229,204,0.12)",letterSpacing:1}}>
