@@ -40,3 +40,20 @@
 .read-the-docs {
   color: #888;
 }
+/* Update the .hdr class in both components to be identical */
+.hdr {
+  position: sticky; top: 0; z-index: 100;
+  height: 64px; /* Fixed height prevents jumping */
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 0 16px; 
+  background: rgba(2, 9, 16, 0.94);
+  backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1px solid rgba(0, 191, 255, 0.1);
+}
+
+/* Ensure the .page container has identical top padding */
+.page {
+  width: 100%; max-width: min(820px, 100vw);
+  margin: 0 auto; 
+  padding: 16px 14px; /* Consistent top padding */
+}
