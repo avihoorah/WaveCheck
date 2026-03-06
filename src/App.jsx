@@ -1474,6 +1474,7 @@ function DiveCheckMode({ setMode }) {
   const [data, setData]               = useState(null);
   const [hourly, setHourly]           = useState(null);
   const [liveSst, setLiveSst]         = useState(null);
+  const [satelliteViz, setSatelliteViz] = useState(null); // Copernicus KD490 result
   const [loading, setLoading]         = useState(false);
   const [refreshing, setRefreshing]   = useState(false);
   const [err, setErr]                 = useState(null);
@@ -1495,6 +1496,11 @@ function DiveCheckMode({ setMode }) {
         fetch(`https://api.open-meteo.com/v1/forecast?latitude=${s.lat}&longitude=${s.lon}&current=temperature_2m,wind_speed_10m,wind_direction_10m,cloud_cover,uv_index&hourly=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation_probability,wind_gusts_10m&timezone=Africa%2FJohannesburg&forecast_days=3`),
         fetch(`https://marine-api.open-meteo.com/v1/marine?latitude=${s.lat}&longitude=${s.lon}&hourly=sea_surface_temperature&timezone=Africa%2FJohannesburg&forecast_days=1`).catch(()=>null),
       ]);
+      // Copernicus KD490 satellite visibility — fire in parallel, don't block on failure
+      fetch(`/api/visibility?lat=${s.lat}&lon=${s.lon}`)
+        .then(r => r.json())
+        .then(d => { if (d.est && !d.error) setSatelliteViz(d); else setSatelliteViz(null); })
+        .catch(() => setSatelliteViz(null));
       const m=await mr.json(), w=await wr.json(), ss=sr?await sr.json().catch(()=>null):null;
       const ws  = w.current?.wind_speed_10m  ?? w.hourly?.wind_speed_10m?.[cHr]  ?? 0;
       const wd  = w.current?.wind_direction_10m ?? w.hourly?.wind_direction_10m?.[cHr] ?? 0;
@@ -1562,7 +1568,11 @@ function DiveCheckMode({ setMode }) {
   },[]);
 
   const verdict = data ? diveVerdict(data.wh, data.ws, data.sp, data.tl) : null;
-  const vis     = data ? visibilityEstimate(data.wh, data.ws, data.sp, data.wdir, site, hr, new Date().getMonth()) : null;
+  // Visibility: prefer Copernicus satellite KD490 data, fallback to inference model
+  const vis = data
+    ? (satelliteViz ?? visibilityEstimate(data.wh, data.ws, data.sp, data.wdir, site, hr, new Date().getMonth()))
+    : null;
+  const visSource = satelliteViz ? "satellite" : "model";
   const current = data ? currentStrength(data.wh, data.tl, data.ts) : null;
   const suit    = data ? diveWetsuit(data.wt) : null;
 
@@ -1955,9 +1965,22 @@ function DiveCheckMode({ setMode }) {
                   {/* VISIBILITY + CURRENT */}
                   <div style={{display:"flex",gap:7}}>
                     <div style={{flex:1,background:`${vis.color}08`,border:`1px solid ${vis.color}20`,borderRadius:11,padding:"12px 14px"}}>
-                      <div className="card-label" style={{color:`${vis.color}60`}}>👁 EST. VISIBILITY</div>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:4}}>
+                        <div className="card-label" style={{color:`${vis.color}60`,marginBottom:0}}>👁 VISIBILITY</div>
+                        <span style={{fontSize:6.5,letterSpacing:1,padding:"2px 6px",borderRadius:10,
+                          background: visSource==="satellite" ? "rgba(0,255,157,0.1)" : "rgba(255,179,0,0.08)",
+                          border: `1px solid ${visSource==="satellite" ? "rgba(0,255,157,0.3)" : "rgba(255,179,0,0.2)"}`,
+                          color: visSource==="satellite" ? "#00ff9d" : "#ffb300",
+                          fontFamily:"'Orbitron',monospace"}}>
+                          {visSource==="satellite" ? "🛰 SAT" : "~ MODEL"}
+                        </span>
+                      </div>
                       <div style={{fontFamily:"'Orbitron',monospace",fontSize:20,color:vis.color,lineHeight:1}}>{vis.est}</div>
-                      <div style={{fontSize:8,color:"rgba(0,229,204,0.3)",marginTop:4}}>Based on swell · not real-time</div>
+                      <div style={{fontSize:8,color:"rgba(0,229,204,0.3)",marginTop:4}}>
+                        {visSource==="satellite"
+                          ? `KD490 ${satelliteViz?.kd490}m⁻¹ · ${satelliteViz?.date ?? "today"}`
+                          : `${vis.quality} · swell-based estimate`}
+                      </div>
                     </div>
                     <div style={{flex:1,background:`${current.color}08`,border:`1px solid ${current.color}20`,borderRadius:11,padding:"12px 14px"}}>
                       <div className="card-label" style={{color:`${current.color}60`}}>🌀 CURRENT</div>
@@ -2317,7 +2340,8 @@ function DiveCheckMode({ setMode }) {
               {/* FOOTER */}
               <div style={{marginTop:18,padding:"10px 14px",borderTop:"1px solid rgba(0,229,204,0.06)"}}>
                 <div style={{display:"flex",flexWrap:"wrap",gap:4,marginBottom:5}}>
-                  {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"Live SST ✓":"Seasonal model"),"TIDES: Harmonic"].map(s=>(
+                  {["WAVES: Open-Meteo Marine","WIND: Open-Meteo","WATER: "+(liveSst?"Live SST ✓":"Seasonal model"),"TIDES: Harmonic",
+                    "VIZ: "+(satelliteViz?"🛰 Copernicus KD490 ✓":"Swell model")].map(s=>(
                     <span key={s} style={{fontSize:7.5,color:"#00e5cc",background:"rgba(0,229,204,0.04)",
                       border:"1px solid rgba(0,229,204,0.1)",borderRadius:4,padding:"2px 7px",letterSpacing:0.5,
                       fontFamily:"'Orbitron',monospace",fontSize:6.5}}>{s}</span>
