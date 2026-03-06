@@ -779,9 +779,19 @@ function WaveCheckMode({ setMode }) {
 
         /* ── SKELETON ── */
         @keyframes skeletonPulse { 0%,100%{opacity:0.4} 50%{opacity:0.9} }
-        .sk { background:rgba(255,255,255,0.04); border-radius:8px; animation:skeletonPulse 1.6s ease-in-out infinite; }
+        @keyframes shimmerMove { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .sk {
+          background:linear-gradient(90deg,
+            rgba(255,255,255,0.02) 25%,
+            rgba(255,255,255,0.08) 50%,
+            rgba(255,255,255,0.02) 75%);
+          background-size:200% 100%;
+          border-radius:12px;
+          animation:shimmerMove 1.5s linear infinite;
+          border:1px solid rgba(255,255,255,0.03);
+        }
         .sk-line { height:10px; border-radius:4px; }
-        .sk-hero { height:140px; border-radius:16px; }
+        .sk-hero { height:160px; border-radius:16px; }
         .sk-card { height:80px; border-radius:12px; }
         .pulse { animation:pulse 2.5s ease-in-out infinite; }
         .shimmer { animation:shimmer 1.5s ease-in-out infinite; }
@@ -815,9 +825,10 @@ function WaveCheckMode({ setMode }) {
         /* ── HEADER ── */
         .hdr {
           position:sticky; top:0; z-index:100;
+          height:68px;
           display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:11px 16px;
-          background:rgba(2,9,16,0.88);
+          padding:0 16px;
+          background:rgba(2,9,16,0.9);
           backdrop-filter:blur(24px);
           -webkit-backdrop-filter:blur(24px);
           border-bottom:1px solid rgba(0,191,255,0.08);
@@ -860,7 +871,7 @@ function WaveCheckMode({ setMode }) {
 
         .page {
           width:100%; max-width:min(820px,100vw);
-          margin:0 auto; padding:12px 14px;
+          margin:0 auto; padding:16px 14px 12px;
           overflow-x:hidden;
         }
 
@@ -1015,9 +1026,9 @@ function WaveCheckMode({ setMode }) {
           {/* ── BEACH SELECTOR ── */}
           <div style={{marginBottom:14}}>
             {/* Compact current beach + change */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:34}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:18,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
                   {beach.name}
                 </div>
                 <span style={{fontSize:7,color:LVL_COLOR[beach.level]??"#888",letterSpacing:1,flexShrink:0,
@@ -1077,9 +1088,16 @@ function WaveCheckMode({ setMode }) {
 
           {/* ── LOADING ── */}
           {loading && (
-            <div style={{textAlign:"center",padding:"60px 0",color:"rgba(255,255,255,0.2)"}}>
-              <div style={{fontSize:36,display:"inline-block",animation:"spin 1.6s linear infinite",marginBottom:14}}>🌊</div>
-              <div style={{fontSize:9,letterSpacing:4}}>READING THE OCEAN…</div>
+            <div style={{display:"flex",flexDirection:"column",gap:9,padding:"4px 0"}}>
+              <div className="sk sk-hero"/>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
+                <div className="sk sk-card"/>
+                <div className="sk sk-card"/>
+              </div>
+              <div className="sk" style={{height:44,borderRadius:10}}/>
+              <div style={{display:"flex",gap:6}}>
+                {[1,2,3].map(i=><div key={i} className="sk" style={{flex:1,height:28,borderRadius:20}}/>)}
+              </div>
             </div>
           )}
           {err && (
@@ -1667,7 +1685,17 @@ function DiveCheckMode({ setMode }) {
         .rise    { animation:rise 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards; }
 
         @keyframes skeletonPulse { 0%,100%{opacity:0.3} 50%{opacity:0.8} }
-        .sk { background:rgba(0,229,204,0.06); border-radius:8px; animation:skeletonPulse 1.6s ease-in-out infinite; }
+        @keyframes shimmerMove { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        .sk {
+          background:linear-gradient(90deg,
+            rgba(0,229,204,0.04) 25%,
+            rgba(0,229,204,0.12) 50%,
+            rgba(0,229,204,0.04) 75%);
+          background-size:200% 100%;
+          border-radius:12px;
+          animation:shimmerMove 1.5s linear infinite;
+          border:1px solid rgba(0,229,204,0.05);
+        }
         .sk-hero { height:180px; border-radius:16px; }
         .sk-card { height:80px; border-radius:12px; }
         .shimmer { animation:shimmer 1.6s ease-in-out infinite; }
@@ -1694,8 +1722,9 @@ function DiveCheckMode({ setMode }) {
 
         .hdr {
           position:sticky; top:0; z-index:100;
+          height:68px;
           display:flex; align-items:center; justify-content:space-between; gap:8px;
-          padding:10px 16px;
+          padding:0 16px;
           background:rgba(2,13,15,0.94);
           backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px);
           border-bottom:1px solid rgba(0,229,204,0.1);
@@ -1725,7 +1754,7 @@ function DiveCheckMode({ setMode }) {
 
         .page {
           width:100%; max-width:min(820px,100vw);
-          margin:0 auto; padding:12px 14px;
+          margin:0 auto; padding:16px 14px 12px;
           overflow-x:hidden; position:relative; z-index:1;
         }
 
@@ -1853,9 +1882,9 @@ function DiveCheckMode({ setMode }) {
 
           {/* ── SITE SELECTOR ── */}
           <div style={{marginBottom:14}}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8}}>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8,gap:8,minHeight:34}}>
               <div style={{display:"flex",alignItems:"center",gap:6,minWidth:0,flex:1,overflow:"hidden"}}>
-                <div style={{fontFamily:"'Orbitron',monospace",fontSize:16,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
+                <div style={{fontFamily:"'Orbitron',monospace",fontSize:17,letterSpacing:1,color:"#fff",lineHeight:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",minWidth:0}}>
                   {site.name}
                 </div>
                 {MPA_SITES.includes(site.id) && (
